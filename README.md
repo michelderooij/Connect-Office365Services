@@ -8,10 +8,7 @@ menu items, hold 'Shift' while Powershell ISE loads.
 
 ## Getting Started
 
-.\Microsoft.PowerShell_profile.ps1
-Defines functions in current shell or ISE session (when $profile contains functions or is replaced with script).
-
-After loading , the following helper functions will be available:
+After execution, the following helper functions will be available:
 
 * Connect-AzureActiveDirectory	    Connects to Azure Active Directory
 * Connect-AzureRMS           	    Connects to Azure Rights Management
@@ -51,7 +48,7 @@ Next time you open PowerShell, the script should load.
 
 ## Contributing
 
--
+N/A
 
 ## Versioning
 
@@ -67,5 +64,5 @@ This project is licensed under the MIT License - see the LICENSE.md for details.
 
 ## Acknowledgments
 
--
+N/A
  
