@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.84, January 10th, 2018
+    Version 1.85, January 13th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for MFA, authentication fails (OAuth).
@@ -60,6 +60,7 @@
     1.82    Bug fix SharePoint module version check
     1.83    Removed Credentials option for ExO/MFA connect
     1.84    Added Exchange ADAL loading support
+    1.85    Fixed menu creation in ISE
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -113,7 +114,7 @@ $local:Functions = @(
     'Settings|Exchange On-Premises FQDN|Get-ExchangeOnPremisesFQDN'
 )
 
-$local:CreateISEMenu = $psISE -and [System.Windows.Input.Keyboard]::IsKeyDown( [System.Windows.Input.Key]::LeftShift)
+$local:CreateISEMenu = $psISE -and -not [System.Windows.Input.Keyboard]::IsKeyDown( [System.Windows.Input.Key]::LeftShift)
 If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
 
 # Local Exchange session options
