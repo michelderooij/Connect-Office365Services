@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.85, January 13th, 2018
+    Version 1.86, February 16th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for MFA, authentication fails (OAuth).
@@ -43,7 +43,7 @@
     1.71    Added AzureADPreview PowerShell Module Support
     1.72    Changed credential non-prompting condition for AzureAD
     1.75    Added support for MFA-enabled Security & Compliance Center
-            Added module version checks (online when possible)
+            Added module version checks (online when possible) setting OnlineModuleVersionChecks
             Switched AzureADv1 to PS gallery version
             Removed Sign-In Assistant checks
             Added Set-Office365Environment to switch to other region, e.g. Germany, China etc.
@@ -61,6 +61,8 @@
     1.83    Removed Credentials option for ExO/MFA connect
     1.84    Added Exchange ADAL loading support
     1.85    Fixed menu creation in ISE
+    1.86    Updated version check for AzureADPreview (2.0.0.154)
+            Added automatic module updating (Admin mode, OnlineModuleAutoUpdate & OnlineModuleVersionChecks)
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -95,16 +97,17 @@ Write-Host 'Loading Connect-Office365Services v1.83'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2020.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
+$local:OnlineModuleVersionChecks = $true
+$local:OnlineModuleAutoUpdate = $true
 
 $local:Functions = @(
     'Connect|Exchange Online|Connect-ExchangeOnline',
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
-    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline',
-    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread',
-    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview',
-    'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339|',
+    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.166.0',
+    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.0.155',
+    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.0.154',
+    'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.6906.0',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.0'
@@ -397,28 +400,44 @@ ForEach ( $local:Function in $local:Functions) {
         }
         If ( $local:Item[3]) {
             $local:Module = Get-Module -Name $local:Item[3] -ListAvailable
-            $local:Version = ($local:Module).Version
+            $local:Version = ($local:Module).Version[0]
             Write-Host "$($local:Item[4]) module installed (version $($local:Version))" -ForegroundColor Green -NoNewline
-            If ( $local:Item[6]) {
-                $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
-            }
-            Else {
-                If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
-                    Try {
-                        $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop
-                        $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
+            If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
+                Try {
+                    $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop
+                    $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
+                    If( $outdated -and $local:OnlineModuleAutoUpdate) {
+                        $ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
+                        if( $ThisPrincipal.IsInRole("Administrators")) { 
+                            Update-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop -Confirm:$false
+                            Update-Module -Name $local:Item[3] -RequiredVersion $local:Version -Repository PSGallery -ErrorAction Stop -Confirm:$false
+                            Write-Host ' UPDATED' -ForegroundColor YELLOW
+                        }
+			Else {
+			    Write-Host ' OUTDATED' -ForegroundColor Red
+			}
                     }
-                    Catch {
-                        $outdated = $false
-                    }
+                    Write-Host ' (Current)' -ForegroundColor Green
+                }
+                Catch {
+		    Write-Host ''
                 }
             }
-            If ( $outDated) {
-                Write-Host ' OUTDATED' -ForegroundColor Red
-            }
-            Else {
-                Write-Host ''
-            }
+	    Else {
+                # Check if we have a last known version
+                If ( $local:Item[6]) {
+                    $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
+                    If( $outdated -and $local:OnlineModuleAutoUpdate) {
+                        Write-Host ' OUTDATED' -ForegroundColor Red
+		    }
+                    Else {
+                        Write-Host ''
+                    }
+                }
+		Else {
+                    Write-Host ''
+                }
+	    }
         }
     }
     Else {
