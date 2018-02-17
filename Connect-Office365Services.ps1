@@ -99,8 +99,8 @@ Write-Host 'Loading Connect-Office365Services v1.83'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2020.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $true
-$local:OnlineModuleAutoUpdate = $true
+$local:OnlineModuleVersionChecks = $false
+$local:OnlineModuleAutoUpdate = $false
 $local:ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
 Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
