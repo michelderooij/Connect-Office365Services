@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.86, February 16th, 2018
+    Version 1.87, February 17th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for MFA, authentication fails (OAuth).
@@ -63,6 +63,8 @@
     1.85    Fixed menu creation in ISE
     1.86    Updated version check for AzureADPreview (2.0.0.154)
             Added automatic module updating (Admin mode, OnlineModuleAutoUpdate & OnlineModuleVersionChecks)
+    1.87    Small bug fixes in outdated logic
+            Added showing OnlineChecks/AutoUpdate/IsAdmin info
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -97,8 +99,11 @@ Write-Host 'Loading Connect-Office365Services v1.83'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2020.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
-$local:OnlineModuleAutoUpdate = $false
+$local:OnlineModuleVersionChecks = $true
+$local:OnlineModuleAutoUpdate = $true
+$local:ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
+$local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
+Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
 
 $local:Functions = @(
     'Connect|Exchange Online|Connect-ExchangeOnline',
@@ -401,14 +406,13 @@ ForEach ( $local:Function in $local:Functions) {
         If ( $local:Item[3]) {
             $local:Module = Get-Module -Name $local:Item[3] -ListAvailable
             $local:Version = ($local:Module).Version[0]
-            Write-Host "$($local:Item[4]) module installed (version $($local:Version))" -ForegroundColor Green -NoNewline
+            Write-Host "$($local:Item[4]) module installed (v$($local:Version))" -ForegroundColor Green -NoNewline
             If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
                 Try {
                     $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop
                     $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
                     If( $outdated -and $local:OnlineModuleAutoUpdate) {
-                        $ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
-                        if( $ThisPrincipal.IsInRole("Administrators")) { 
+                        if( $local:IsAdmin) { 
                             Update-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop -Confirm:$false
                             Update-Module -Name $local:Item[3] -RequiredVersion $local:Version -Repository PSGallery -ErrorAction Stop -Confirm:$false
                             Write-Host ' UPDATED' -ForegroundColor YELLOW
@@ -417,7 +421,14 @@ ForEach ( $local:Function in $local:Functions) {
 			    Write-Host ' OUTDATED' -ForegroundColor Red
 			}
                     }
-                    Write-Host ' (Current)' -ForegroundColor Green
+                    Else {
+                        If( $outdated) {
+                            Write-Host ' OUTDATED' -ForegroundColor Red
+                        }
+                        Else {
+                            Write-Host '' 
+                        }
+                    }
                 }
                 Catch {
 		    Write-Host ''
