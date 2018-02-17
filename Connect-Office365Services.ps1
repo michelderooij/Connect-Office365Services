@@ -95,7 +95,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.83'
+Write-Host 'Loading Connect-Office365Services v1.87'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2020.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
