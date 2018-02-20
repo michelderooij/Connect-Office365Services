@@ -15,11 +15,11 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.87, February 17th, 2018
+    Version 1.88, February 20th, 2018
 
     KNOWN LIMITATIONS:
-    - When specifying PSSessionOptions for MFA, authentication fails (OAuth).
-      Therefor, no PSSessionOptions are used for MFA.
+    - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
+      Therefor, no PSSessionOptions are used for Modern Authentication.
 
     .LINK
     http://eightwone.com
@@ -65,6 +65,9 @@
             Added automatic module updating (Admin mode, OnlineModuleAutoUpdate & OnlineModuleVersionChecks)
     1.87    Small bug fixes in outdated logic
             Added showing OnlineChecks/AutoUpdate/IsAdmin info
+    1.88    Updated module updating routine
+            Updated SkypeOnlineConnector reference (PSGallery)
+            Updated versions for Teams
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -95,12 +98,12 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.87'
+Write-Host 'Loading Connect-Office365Services v1.88'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2020.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
-$local:OnlineModuleAutoUpdate = $false
+$local:OnlineModuleVersionChecks = $true
+$local:OnlineModuleAutoUpdate = $true
 $local:ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
 Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
@@ -113,9 +116,9 @@ $local:Functions = @(
     'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.0.155',
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.0.154',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
-    'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
+    'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.powershellgallery.com/packages/SkypeOnlineConnector|7.0.0.2',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.6906.0',
-    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.0'
+    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.1'
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
     'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
@@ -209,7 +212,7 @@ Function global:Get-ExchangeOnPremisesFQDN {
 function global:Connect-ComplianceCenter {
     If ( !($global:Office365Credentials)) { Get-Office365Credentials }
     If ( $global:Office365CredentialsMFA) {
-        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:Office365Credentials.username) with MFA .."
+        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:Office365Credentials.username) with Modern Authentication .."
         $global:Session365 = New-ExoPSSession -ConnectionUri $global:SCCConnectionEndpointUri -UserPrincipalName ($global:Office365Credentials).UserName -AzureADAuthorizationEndpointUri $global:AzureADAuthorizationEndpointUri -PSSessionOption $local:SessionExchangeOptions
         New-IPPSSession -ConnectionUri $global:ConnectionEndpointUri -UserPrincipalName ($global:Office365Credentials).UserName -AzureADAuthorizationEndpointUri $global:AzureADAuthorizationEndpointUri -PSSessionOption $local:SessionExchangeOptions
     }
@@ -233,7 +236,7 @@ function global:Connect-MSTeams {
         $global:Office365Tenant = ($global:Office365Credentials).username.Substring(($global:Office365Credentials).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
     }
     If ( $global:Office365CredentialsMFA) {
-        Write-Host "Connecting to Microsoft Teams using $($global:Office365Credentials.username) with MFA .."
+        Write-Host "Connecting to Microsoft Teams using $($global:Office365Credentials.username) with Modern Authentication .."
         $Parms = @{'AccountId' = ($global:Office365Credentials).username}
     }
     Else {
@@ -250,7 +253,7 @@ function global:Connect-AzureActiveDirectory {
     If ( (Get-Module -Name AzureAD) -or (Get-Module -Name AzureADPreview)) {
         If ( !($global:Office365Credentials)) { Get-Office365Credentials }
         If ( $global:Office365CredentialsMFA) {
-            Write-Host 'Connecting to Azure Active Directory with MFA ..'
+            Write-Host 'Connecting to Azure Active Directory with Modern Authentication ..'
             $Parms = @{'AzureEnvironment' = $global:AzureEnvironment}
         }
         Else {
@@ -285,7 +288,7 @@ function global:Connect-SkypeOnline {
     If ( Get-Module -Name SkypeOnlineConnector) {
         If ( !($global:Office365Credentials)) { Get-Office365Credentials }
         If ( $global:Office365CredentialsMFA) {
-            Write-Host "Connecting to Skype for Business Online using $($global:Office365Credentials.username) with MFA .."
+            Write-Host "Connecting to Skype for Business Online using $($global:Office365Credentials.username) with Modern Authentication .."
             $Parms = @{'Username' = ($global:Office365Credentials).username}
         }
         Else {
@@ -311,7 +314,7 @@ function global:Connect-SharePointOnline {
             If ( !($global:Office365Tenant)) { Get-Office365Tenant }
         }
         If ( $global:Office365CredentialsMFA) {
-            Write-Host 'Connecting to SharePoint Online with MFA ..'
+            Write-Host 'Connecting to SharePoint Online with Modern Authentication ..'
             $Parms = @{'url' = "https://$($global:Office365Tenant)-admin.sharepoint.com"; 'Region' = $global:SharePointRegion}
         }
         Else {
@@ -413,17 +416,24 @@ ForEach ( $local:Function in $local:Functions) {
                     $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
                     If( $outdated -and $local:OnlineModuleAutoUpdate) {
                         if( $local:IsAdmin) { 
-                            Update-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop -Confirm:$false
-                            Update-Module -Name $local:Item[3] -RequiredVersion $local:Version -Repository PSGallery -ErrorAction Stop -Confirm:$false
-                            Write-Host ' UPDATED' -ForegroundColor YELLOW
+                            Try {
+                                # Update to latest and greatest ..
+                                Update-Module -Name $local:Item[3] -ErrorAction Stop -Force -Confirm:$false
+                                # Uninstall installed old versions
+                                Get-Module -Name $local:Item[3] -ListAvailable | Sort -Property Version -Descending | Select -Skip 1 | Uninstall-Module -ErrorAction Stop -Confirm:$false -Force
+                                Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
+                            }
+                            Catch {
+                                Write-Host ' ERROR UPDATING (try manual update)' -ForegroundColor RED
+                            }
                         }
 			Else {
-			    Write-Host ' OUTDATED' -ForegroundColor Red
+			    Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
 			}
                     }
                     Else {
                         If( $outdated) {
-                            Write-Host ' OUTDATED' -ForegroundColor Red
+                            Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
                         }
                         Else {
                             Write-Host '' 
@@ -439,7 +449,7 @@ ForEach ( $local:Function in $local:Functions) {
                 If ( $local:Item[6]) {
                     $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
                     If( $outdated -and $local:OnlineModuleAutoUpdate) {
-                        Write-Host ' OUTDATED' -ForegroundColor Red
+                        Write-Host (' OUTDATED (v{0} expected)' -f [System.Version]$local:item[6]) -ForegroundColor Red
 		    }
                     Else {
                         Write-Host ''
