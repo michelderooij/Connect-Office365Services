@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.89, February 20th, 2018
+    Version 1.90, March 20th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -69,6 +69,9 @@
             Updated SkypeOnlineConnector reference (PSGallery)
             Updated versions for Teams
     1.89    Reverted back to installable SkypeOnlineConnector
+    1.90    Updated info for Azure Active Directory Preview module
+            Updated info for Exchange Online Modern Authentication module
+            Renamed 'Multi-Factor Authentication' to 'Modern Authentication'
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -101,10 +104,10 @@
 
 Write-Host 'Loading Connect-Office365Services v1.88'
 
-$local:ExoPSSessionModuleVersion_Recommended = '16.00.2020.000'
+$local:ExoPSSessionModuleVersion_Recommended = '16.00.2186.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
-$local:OnlineModuleAutoUpdate = $false
+$local:OnlineModuleVersionChecks = $true
+$local:OnlineModuleAutoUpdate = $true
 $local:ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
 Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
@@ -115,7 +118,7 @@ $local:Functions = @(
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
     'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.166.0',
     'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.0.155',
-    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.0.154',
+    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.1.2',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.6906.0',
@@ -177,7 +180,7 @@ function global:Set-Office365Environment {
     Write-Host ('Environment set to {0}' -f $global:AzureEnvironment)
 }
 function global:Get-MultiFactorAuthenticationUsage {
-    $Answer = Read-host  -Prompt 'Would you like to use Multi-Factor Authentication? (y/N) '
+    $Answer = Read-host  -Prompt 'Would you like to use Modern Authentication? (y/N) '
     Switch ($Answer.ToUpper()) {
         'Y' { $rval = $true }
         Default { $rval = $false}
@@ -374,7 +377,7 @@ $local:ModuleList = @(Get-ChildItem -Path "$($env:LOCALAPPDATA)\Apps\2.0" -Filte
 If ( $local:ModuleList) {
     $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeMFAModule).dll"
     $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
-    Write-Host "Exchange Multi-Factor Authentication PowerShell Module installed (version $($local:ModuleVersion))" -ForegroundColor Green
+    Write-Host "Exchange Modern Authentication PowerShell Module installed (version $($local:ModuleVersion))" -ForegroundColor Green
     if ( [System.Version]$local:ModuleVersion -lt [System.Version]$local:ExoPSSessionModuleVersion_Recommended) {
         Write-Host ('It is highly recommended to update the ExoPSSession module to version {0} or higher' -f $local:ExoPSSessionModuleVersion_Recommended) -ForegroundColor Red
     }
@@ -387,7 +390,7 @@ If ( $local:ModuleList) {
     }
 }
 Else {
-    Write-Verbose -Message 'Exchange Multi-Factor Authentication PowerShell Module is not installed.`nYou can download the module from EAC (Hybrid page) or via http://bit.ly/ExOPSModule'
+    Write-Verbose -Message 'Exchange Modern Authentication PowerShell Module is not installed.`nYou can download the module from EAC (Hybrid page) or via http://bit.ly/ExOPSModule'
 }
 
 ForEach ( $local:Function in $local:Functions) {
