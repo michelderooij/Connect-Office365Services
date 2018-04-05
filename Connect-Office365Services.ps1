@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.90, March 20th, 2018
+    Version 1.91, April 5th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -72,6 +72,7 @@
     1.90    Updated info for Azure Active Directory Preview module
             Updated info for Exchange Online Modern Authentication module
             Renamed 'Multi-Factor Authentication' to 'Modern Authentication'
+    1.91    Updated info for SharePoint Online module
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -102,7 +103,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.88'
+Write-Host 'Loading Connect-Office365Services v1.91'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2186.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
@@ -121,7 +122,7 @@ $local:Functions = @(
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.1.2',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
-    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.6906.0',
+    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.7521.1200',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.1'
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
@@ -191,7 +192,7 @@ function global:Get-MultiFactorAuthenticationUsage {
 function global:Connect-ExchangeOnline {
     If ( !($global:Office365Credentials)) { Get-Office365Credentials }
     If ( $global:Office365CredentialsMFA) {
-        Write-Host "Connecting to Exchange Online using $($global:Office365Credentials.username) with MFA .."
+        Write-Host "Connecting to Exchange Online using $($global:Office365Credentials.username) with Modern Authentication .."
         $global:Session365 = New-ExoPSSession -ConnectionUri $global:ConnectionEndpointUri -UserPrincipalName ($global:Office365Credentials).UserName -AzureADAuthorizationEndpointUri $global:AzureADAuthorizationEndpointUri -PSSessionOption $global:SessionExchangeOptions
     }
     Else {
