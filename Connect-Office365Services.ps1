@@ -73,6 +73,7 @@
             Updated info for Exchange Online Modern Authentication module
             Renamed 'Multi-Factor Authentication' to 'Modern Authentication'
     1.91    Updated info for SharePoint Online module
+            Fixed removal of old module(s) when updating
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -425,7 +426,7 @@ ForEach ( $local:Function in $local:Functions) {
                                 # Update to latest and greatest ..
                                 Update-Module -Name $local:Item[3] -ErrorAction Stop -Force -Confirm:$false
                                 # Uninstall installed old versions
-                                Get-Module -Name $local:Item[3] -ListAvailable | Sort -Property Version -Descending | Select -Skip 1 | Uninstall-Module -ErrorAction Stop -Confirm:$false -Force
+                                Get-Module -Name $local:Item[3] -ListAvailable | Sort -Property Version -Descending | Select -Skip 1 | ForEach { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
                                 Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
                             }
                             Catch {
