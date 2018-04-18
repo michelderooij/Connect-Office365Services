@@ -351,10 +351,6 @@ Function global:Get-OnPremisesCredentials {
     $global:OnPremisesCredentials = $host.ui.PromptForCredential('On-Premises Credentials', 'Please Enter Your On-Premises Credentials', '', '')
 }
 
-Function global:Get-ExchangeOnPremisesFQDN {
-    $global:ExchangeOnPremisesFQDN = Read-Host -Prompt 'Enter Exchange On-Premises endpoint, e.g. exchange1.contoso.com'
-}
-
 Function global:Get-Office365Tenant {
     $global:Office365Tenant = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
 }
