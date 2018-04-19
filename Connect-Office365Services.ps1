@@ -372,7 +372,7 @@ Set-Office365Environment -AzureEnvironment 'Default'
 #Scan for Exchange & SCC MFA PowerShell module presence
 $local:ExchangeMFAModule = 'Microsoft.Exchange.Management.ExoPowershellModule'
 $local:ExchangeADALModule = 'Microsoft.IdentityModel.Clients.ActiveDirectory'
-$local:ModuleList = @(Get-ChildItem -Path "$($env:LOCALAPPDATA)\Apps\2.0" -Filter "$($local:ExchangeMFAModule).manifest" -Recurse ) | Sort LastWriteTime -Desc | Select -First 1
+$local:ModuleList = @(Get-ChildItem -Path "$($env:LOCALAPPDATA)\Apps\2.0" -Filter "$($local:ExchangeMFAModule).manifest" -Recurse ) | Sort-Object LastWriteTime -Desc | Select-Object -First 1
 If ( $local:ModuleList) {
     $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeMFAModule).dll"
     $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
@@ -418,12 +418,12 @@ ForEach ( $local:Function in $local:Functions) {
                     $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop
                     $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
                     If( $outdated -and $local:OnlineModuleAutoUpdate) {
-                        if( $local:IsAdmin) { 
+                        if( $local:IsAdmin) {
                             Try {
                                 # Update to latest and greatest ..
                                 Update-Module -Name $local:Item[3] -ErrorAction Stop -Force -Confirm:$false
                                 # Uninstall installed old versions
-                                Get-Module -Name $local:Item[3] -ListAvailable | Sort -Property Version -Descending | Select -Skip 1 | ForEach { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
+                                Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object-Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
                                 Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
                             }
                             Catch {
@@ -439,7 +439,7 @@ ForEach ( $local:Function in $local:Functions) {
                             Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
                         }
                         Else {
-                            Write-Host '' 
+                            Write-Host ''
                         }
                     }
                 }
