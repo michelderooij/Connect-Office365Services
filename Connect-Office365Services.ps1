@@ -94,7 +94,7 @@
     - Get-Office365Credentials    	    Gets Office 365 credentials
     - Connect-ExchangeOnPremises 	    Connects to Exchange On-Premises
     - Get-OnPremisesCredentials    	    Gets On-Premises credentials
-    - Get-ExchangeOnPremisesFQDNGets	    FQDN for Exchange On-Premises
+    - Get-ExchangeOnPremisesFQDN            Gets FQDN for Exchange On-Premises
     - Get-Office365Tenant		    Gets Office 365 tenant name
     - Set-Office365Environment		    Configures Uri's and region to use
 
