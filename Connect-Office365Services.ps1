@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.92, April 14th, 2018
+    Version 1.93, April 26th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -75,6 +75,8 @@
     1.91    Updated info for SharePoint Online module
             Fixed removal of old module(s) when updating
     1.92    Updated AzureAD module 2.0.1.6
+    1.93    Updated Teams module 0.9.3
+            Fixed typo in uninstall of old module when upgrading
 
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -105,14 +107,14 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.91'
+Write-Host 'Loading Connect-Office365Services v1.93'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2186.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
-$local:OnlineModuleAutoUpdate = $false
-$local:ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
-$local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
+$local:OnlineModuleVersionChecks = $False
+$local:OnlineModuleAutoUpdate = $False
+$local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
+$local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
 Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
 
 $local:Functions = @(
@@ -125,7 +127,7 @@ $local:Functions = @(
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.7521.1200',
-    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.1'
+    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.3'
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
     'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
@@ -382,7 +384,7 @@ If ( $local:ModuleList) {
     }
     Import-Module -FullyQualifiedName $local:ModuleName -Force
     $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeADALModule).dll"
-    If( Test-Path -Path $local:ModuleName) {
+    If ( Test-Path -Path $local:ModuleName) {
         $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.FileVersion
         Write-Host "Exchange supporting ADAL module found (version $($local:ModuleVersion))" -ForegroundColor Green
         Add-Type -Path $local:ModuleName
@@ -417,25 +419,26 @@ ForEach ( $local:Function in $local:Functions) {
                 Try {
                     $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop
                     $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
-                    If( $outdated -and $local:OnlineModuleAutoUpdate) {
-                        if( $local:IsAdmin) {
+                    If ( $outdated -and $local:OnlineModuleAutoUpdate) {
+                        if ( $local:IsAdmin) {
                             Try {
+                                Write-Host ' .. Upgrading ..' -ForegroundColor White -NoNewline
                                 # Update to latest and greatest ..
                                 Update-Module -Name $local:Item[3] -ErrorAction Stop -Force -Confirm:$false
-                                # Uninstall installed old versions
-                                Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object-Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
+                                # Uninstall all old versions of the module
+                                Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
                                 Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
                             }
                             Catch {
                                 Write-Host ' ERROR UPDATING (try manual update)' -ForegroundColor RED
                             }
                         }
-			Else {
-			    Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
-			}
+                        Else {
+                            Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
+                        }
                     }
                     Else {
-                        If( $outdated) {
+                        If ( $outdated) {
                             Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
                         }
                         Else {
@@ -444,24 +447,24 @@ ForEach ( $local:Function in $local:Functions) {
                     }
                 }
                 Catch {
-		    Write-Host ''
+                    Write-Host ''
                 }
             }
-	    Else {
+            Else {
                 # Check if we have a last known version
                 If ( $local:Item[6]) {
                     $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
-                    If( $outdated -and $local:OnlineModuleAutoUpdate) {
+                    If ( $outdated -and $local:OnlineModuleAutoUpdate) {
                         Write-Host (' OUTDATED (v{0} expected)' -f [System.Version]$local:item[6]) -ForegroundColor Red
-		    }
+                    }
                     Else {
                         Write-Host ''
                     }
                 }
-		Else {
+                Else {
                     Write-Host ''
                 }
-	    }
+            }
         }
     }
     Else {
