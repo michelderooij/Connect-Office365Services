@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.93, April 26th, 2018
+    Version 1.94, May 15th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -77,7 +77,11 @@
     1.92    Updated AzureAD module 2.0.1.6
     1.93    Updated Teams module 0.9.3
             Fixed typo in uninstall of old module when upgrading
+    1.94    Moved all global vars into one global hashtable (myOffice365Services)
+            Updated AzureAD preview info (v2.0.1.11)
+            Updated AzureAD info (v2.0.1.10)
 
+            
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
     connect to Exchange Online the Office 365 Credentials the user is prompted to enter these credentials.
@@ -107,7 +111,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.93'
+Write-Host 'Loading Connect-Office365Services v1.94'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2186.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
@@ -122,8 +126,8 @@ $local:Functions = @(
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
     'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.166.0',
-    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.1.6',
-    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.1.2',
+    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.1.10',
+    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.1.11',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.7521.1200',
@@ -137,8 +141,11 @@ $local:Functions = @(
 $local:CreateISEMenu = $psISE -and -not [System.Windows.Input.Keyboard]::IsKeyDown( [System.Windows.Input.Key]::LeftShift)
 If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
 
+# Initialize global state variable
+$global:myOffice365Services=@{}
+
 # Local Exchange session options
-$global:SessionExchangeOptions = New-PSSessionOption
+$global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
 
 function global:Set-Office365Environment {
     param(
@@ -147,43 +154,44 @@ function global:Set-Office365Environment {
     )
     Switch ( $Environment) {
         'Germany' {
-            $global:ConnectionEndpointUri = 'https://outlook.office.de/PowerShell-LiveID'
-            $global:SCCConnectionEndpointUri = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
-            $global:AzureADAuthorizationEndpointUri = 'https://login.microsoftonline.de/common'
-            $global:SharePointRegion = 'Germany'
-            $global:AzureEnvironment = 'AzureGermanyCloud'
+            $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office.de/PowerShell-LiveID'
+            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.microsoftonline.de/common'
+            $global:myOffice365Services['SharePointRegion'] = 'Germany'
+            $global:myOffice365Services['AzureEnvironment'] = 'AzureGermanyCloud'
         }
         'China' {
-            $global:ConnectionEndpointUri = 'https://partner.outlook.cn/PowerShell-LiveID'
-            $global:SCCConnectionEndpointUri = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
-            $global:AzureADAuthorizationEndpointUri = 'https://login.chinacloudapi.cn/common'
-            $global:SharePointRegion = 'China'
-            $global:AzureEnvironment = 'AzureChinaCloud'
+            $global:myOffice365Services['ConnectionEndpointUri'] = 'https://partner.outlook.cn/PowerShell-LiveID'
+            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.chinacloudapi.cn/common'
+            $global:myOffice365Services['SharePointRegion'] = 'China'
+            $global:myOffice365Services['AzureEnvironment'] = 'AzureChinaCloud'
         }
         'AzurePPE' {
-            $global:ConnectionEndpointUri = ''
-            $global:SCCConnectionEndpointUri = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
-            $global:AzureADAuthorizationEndpointUri = ''
-            $global:SharePointRegion = ''
-            $global:AzureEnvironment = 'AzurePPE'
+            $global:myOffice365Services['ConnectionEndpointUri'] = ''
+            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = ''
+            $global:myOffice365Services['SharePointRegion'] = ''
+            $global:myOffice365Services['AzureEnvironment'] = 'AzurePPE'
         }
         'USGovernment' {
-            $global:ConnectionEndpointUri = 'https://outlook.office365.com/PowerShell-LiveId'
-            $global:SCCConnectionEndpointUri = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
-            $global:AzureADAuthorizationEndpointUri = 'https://login-us.microsoftonline.com/'
-            $global:SharePointRegion = 'ITAR'
-            $global:AzureEnvironment = 'AzureUSGovernment'
+            $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office365.com/PowerShell-LiveId'
+            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login-us.microsoftonline.com/'
+            $global:myOffice365Services['SharePointRegion'] = 'ITAR'
+            $global:myOffice365Services['AzureEnvironment'] = 'AzureUSGovernment'
         }
         default {
-            $global:ConnectionEndpointUri = 'https://outlook.office365.com/PowerShell-LiveId'
-            $global:SCCConnectionEndpointUri = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
-            $global:AzureADAuthorizationEndpointUri = 'https://login.windows.net/common'
-            $global:SharePointRegion = 'Default'
-            $global:AzureEnvironment = 'AzureCloud'
+            $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office365.com/PowerShell-LiveId'
+            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.windows.net/common'
+            $global:myOffice365Services['SharePointRegion'] = 'Default'
+            $global:myOffice365Services['AzureEnvironment'] = 'AzureCloud'
         }
     }
-    Write-Host ('Environment set to {0}' -f $global:AzureEnvironment)
+    Write-Host ('Environment set to {0}' -f $global:myOffice365Services['AzureEnvironment'])
 }
+
 function global:Get-MultiFactorAuthenticationUsage {
     $Answer = Read-host  -Prompt 'Would you like to use Modern Authentication? (y/N) '
     Switch ($Answer.ToUpper()) {
@@ -194,65 +202,65 @@ function global:Get-MultiFactorAuthenticationUsage {
 }
 
 function global:Connect-ExchangeOnline {
-    If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-    If ( $global:Office365CredentialsMFA) {
-        Write-Host "Connecting to Exchange Online using $($global:Office365Credentials.username) with Modern Authentication .."
-        $global:Session365 = New-ExoPSSession -ConnectionUri $global:ConnectionEndpointUri -UserPrincipalName ($global:Office365Credentials).UserName -AzureADAuthorizationEndpointUri $global:AzureADAuthorizationEndpointUri -PSSessionOption $global:SessionExchangeOptions
+    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+        Write-Host "Connecting to Exchange Online using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        $global:myOffice365Services['Session365'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
-        Write-Host "Connecting to Exchange Online using $($global:Office365Credentials.username) .."
-        $global:Session365 = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:ConnectionEndpointUri -Credential $global:Office365Credentials -Authentication Basic -AllowRedirection -SessionOption $global:SessionExchangeOptions
+        Write-Host "Connecting to Exchange Online using $($global:myOffice365Services['Office365Credentials'].username) .."
+        $global:myOffice365Services['Session365'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
-    If ( $global:Session365 ) {Import-PSSession -Session $global:Session365 -AllowClobber}
+    If ( $global:myOffice365Services['Session365'] ) {Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber}
 }
 
 function global:Connect-ExchangeOnPremises {
-    If ( !($global:OnPremisesCredentials)) { Get-OnPremisesCredentials }
-    If ( !($global:ExchangeOnPremisesFQDN)) { Get-ExchangeOnPremisesFQDN }
-    Write-Host "Connecting to Exchange On-Premises $($global:ExchangeOnPremisesFQDN) using $($global:OnPremisesCredentials.username) .."
-    $global:SessionExchange = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($global:ExchangeOnPremisesFQDN)/PowerShell" -Credential $global:OnPremisesCredentials -Authentication Kerberos -AllowRedirection -SessionOption $global:SessionExchangeOptions
-    If ( $global:SessionExchange) {Import-PSSession -Session $global:SessionExchange -AllowClobber}
+    If ( !($global:myOffice365Services['OnPremisesCredentials'])) { Get-OnPremisesCredentials }
+    If ( !($global:myOffice365Services['ExchangeOnPremisesFQDN'])) { Get-ExchangeOnPremisesFQDN }
+    Write-Host "Connecting to Exchange On-Premises $($global:myOffice365Services['ExchangeOnPremisesFQDN']) using $($global:myOffice365Services['OnPremisesCredentials'].username) .."
+    $global:myOffice365Services['SessionExchange'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($global:myOffice365Services['ExchangeOnPremisesFQDN'])/PowerShell" -Credential $global:myOffice365Services['OnPremisesCredentials'] -Authentication Kerberos -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
+    If ( $global:myOffice365Services['SessionExchange']) {Import-PSSession -Session $global:myOffice365Services['SessionExchange'] -AllowClobber}
 }
 
 Function global:Get-ExchangeOnPremisesFQDN {
-    $global:ExchangeOnPremisesFQDN = Read-Host -Prompt 'Enter Exchange On-Premises endpoint, e.g. exchange1.contoso.com'
+    $global:myOffice365Services['ExchangeOnPremisesFQDN'] = Read-Host -Prompt 'Enter Exchange On-Premises endpoint, e.g. exchange1.contoso.com'
 }
 
 function global:Connect-ComplianceCenter {
-    If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-    If ( $global:Office365CredentialsMFA) {
-        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:Office365Credentials.username) with Modern Authentication .."
-        $global:Session365 = New-ExoPSSession -ConnectionUri $global:SCCConnectionEndpointUri -UserPrincipalName ($global:Office365Credentials).UserName -AzureADAuthorizationEndpointUri $global:AzureADAuthorizationEndpointUri -PSSessionOption $local:SessionExchangeOptions
-        New-IPPSSession -ConnectionUri $global:ConnectionEndpointUri -UserPrincipalName ($global:Office365Credentials).UserName -AzureADAuthorizationEndpointUri $global:AzureADAuthorizationEndpointUri -PSSessionOption $local:SessionExchangeOptions
+    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        $global:myOffice365Services['Session365'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        New-IPPSSession -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
-        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:Office365Credentials.username) .."
-        $global:SessionCC = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.compliance.protection.outlook.com/powershell-liveid/' -Credential $global:Office365Credentials -Authentication Basic -AllowRedirection
-        If ( $global:SessionCC ) {Import-PSSession -Session $global:SessionCC -AllowClobber}
+        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) .."
+        $global:myOffice365Services['SessionCC'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.compliance.protection.outlook.com/powershell-liveid/' -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
+        If ( $global:myOffice365Services['SessionCC'] ) {Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber}
     }
 }
 
 function global:Connect-EOP {
-    If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-    Write-Host  -InputObject "Connecting to Exchange Online Protection using $($global:Office365Credentials.username) .."
-    $global:SessionEOP = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.protection.outlook.com/powershell-liveid/' -Credential $global:Office365Credentials -Authentication Basic -AllowRedirection
-    If ( $global:SessionEOP ) {Import-PSSession -Session $global:SessionEOP -AllowClobber}
+    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+    Write-Host  -InputObject "Connecting to Exchange Online Protection using $($global:myOffice365Services['Office365Credentials'].username) .."
+    $global:myOffice365Services['SessionEOP'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.protection.outlook.com/powershell-liveid/' -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
+    If ( $global:myOffice365Services['SessionEOP'] ) {Import-PSSession -Session $global:myOffice365Services['SessionEOP'] -AllowClobber}
 }
 
 function global:Connect-MSTeams {
-    If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-    If (($global:Office365Credentials).username -like '*.onmicrosoft.com') {
-        $global:Office365Tenant = ($global:Office365Credentials).username.Substring(($global:Office365Credentials).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
+    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+    If (($global:myOffice365Services['Office365Credentials']).username -like '*.onmicrosoft.com') {
+        $global:myOffice365Services['Office365Tenant'] = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
     }
-    If ( $global:Office365CredentialsMFA) {
-        Write-Host "Connecting to Microsoft Teams using $($global:Office365Credentials.username) with Modern Authentication .."
-        $Parms = @{'AccountId' = ($global:Office365Credentials).username}
+    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+        Write-Host "Connecting to Microsoft Teams using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        $Parms = @{'AccountId' = ($global:myOffice365Services['Office365Credentials']).username}
     }
     Else {
-        Write-Host "Connecting to Microsoft Teams using $($global:Office365Credentials.username) .."
-        $Parms = @{Credential = $global:Office365Credentials }
+        Write-Host "Connecting to Microsoft Teams using $($global:myOffice365Services['Office365Credentials'].username) .."
+        $Parms = @{Credential = $global:myOffice365Services['Office365Credentials'] }
     }
-    If ( $global:Office365Tenant) { $Parms['TenantId'] = $global:Office365Tenant }
+    If ( $global:myOffice365Services['Office365Tenant']) { $Parms['TenantId'] = $global:myOffice365Services['Office365Tenant'] }
     Connect-MicrosoftTeams @Parms
 }
 
@@ -260,23 +268,23 @@ function global:Connect-AzureActiveDirectory {
     If ( !(Get-Module -Name AzureAD)) {Import-Module -Name AzureAD -ErrorAction SilentlyContinue}
     If ( !(Get-Module -Name AzureADPreview)) {Import-Module -Name AzureADPreview -ErrorAction SilentlyContinue}
     If ( (Get-Module -Name AzureAD) -or (Get-Module -Name AzureADPreview)) {
-        If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-        If ( $global:Office365CredentialsMFA) {
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
             Write-Host 'Connecting to Azure Active Directory with Modern Authentication ..'
-            $Parms = @{'AzureEnvironment' = $global:AzureEnvironment}
+            $Parms = @{'AzureEnvironment' = $global:myOffice365Services['AzureEnvironment']}
         }
         Else {
-            Write-Host "Connecting to Azure Active Directory using $($global:Office365Credentials.username) .."
-            $Parms = @{'Credential' = $global:Office365Credentials; 'AzureEnvironment' = $global:AzureEnvironment}
+            Write-Host "Connecting to Azure Active Directory using $($global:myOffice365Services['Office365Credentials'].username) .."
+            $Parms = @{'Credential' = $global:myOffice365Services['Office365Credentials']; 'AzureEnvironment' = $global:myOffice365Services['AzureEnvironment']}
         }
         Connect-AzureAD @Parms
     }
     Else {
         If ( !(Get-Module -Name MSOnline)) {Import-Module -Name MSOnline -ErrorAction SilentlyContinue}
         If ( Get-Module -Name MSOnline) {
-            If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-            Write-Host "Connecting to Azure Active Directory using $($global:Office365Credentials.username) .."
-            Connect-MsolService -Credential $global:Office365Credentials -AzureEnvironment $global:AzureEnvironment
+            If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+            Write-Host "Connecting to Azure Active Directory using $($global:myOffice365Services['Office365Credentials'].username) .."
+            Connect-MsolService -Credential $global:myOffice365Services['Office365Credentials'] -AzureEnvironment $global:myOffice365Services['AzureEnvironment']
         }
         Else {Write-Error -Message 'Cannot connect to Azure Active Directory - problem loading module.'}
     }
@@ -285,9 +293,9 @@ function global:Connect-AzureActiveDirectory {
 function global:Connect-AzureRMS {
     If ( !(Get-Module -Name AADRM)) {Import-Module -Name AADRM -ErrorAction SilentlyContinue}
     If ( Get-Module -Name AADRM) {
-        If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-        Write-Host "Connecting to Azure RMS using $($global:Office365Credentials.username) .."
-        Connect-AadrmService -Credential $global:Office365Credentials
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        Write-Host "Connecting to Azure RMS using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Connect-AadrmService -Credential $global:myOffice365Services['Office365Credentials']
     }
     Else {Write-Error -Message 'Cannot connect to Azure RMS - problem loading module.'}
 }
@@ -295,17 +303,17 @@ function global:Connect-AzureRMS {
 function global:Connect-SkypeOnline {
     If ( !(Get-Module -Name SkypeOnlineConnector)) {Import-Module -Name SkypeOnlineConnector -ErrorAction SilentlyContinue}
     If ( Get-Module -Name SkypeOnlineConnector) {
-        If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-        If ( $global:Office365CredentialsMFA) {
-            Write-Host "Connecting to Skype for Business Online using $($global:Office365Credentials.username) with Modern Authentication .."
-            $Parms = @{'Username' = ($global:Office365Credentials).username}
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+            Write-Host "Connecting to Skype for Business Online using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+            $Parms = @{'Username' = ($global:myOffice365Services['Office365Credentials']).username}
         }
         Else {
-            Write-Host "Connecting to Skype for Business Online using $($global:Office365Credentials.username) .."
-            $Parms = @{'Credential' = $global:Office365Credentials}
+            Write-Host "Connecting to Skype for Business Online using $($global:myOffice365Services['Office365Credentials'].username) .."
+            $Parms = @{'Credential' = $global:myOffice365Services['Office365Credentials']}
         }
-        $global:SessionSFB = New-CsOnlineSession @Parms
-        If ( $global:SessionSFB ) {Import-PSSession -Session $global:SessionSFB -AllowClobber}
+        $global:myOffice365Services['SessionSFB'] = New-CsOnlineSession @Parms
+        If ( $global:myOffice365Services['SessionSFB'] ) {Import-PSSession -Session $global:myOffice365Services['SessionSFB'] -AllowClobber}
     }
     Else {
         Write-Error -Message 'Cannot connect to Skype for Business Online - problem loading module.'
@@ -315,20 +323,20 @@ function global:Connect-SkypeOnline {
 function global:Connect-SharePointOnline {
     If ( !(Get-Module -Name Microsoft.Online.Sharepoint.PowerShell)) {Import-Module -Name Microsoft.Online.Sharepoint.PowerShell -ErrorAction SilentlyContinue}
     If ( Get-Module -Name Microsoft.Online.Sharepoint.PowerShell) {
-        If ( !($global:Office365Credentials)) { Get-Office365Credentials }
-        If (($global:Office365Credentials).username -like '*.onmicrosoft.com') {
-            $global:Office365Tenant = ($global:Office365Credentials).username.Substring(($global:Office365Credentials).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        If (($global:myOffice365Services['Office365Credentials']).username -like '*.onmicrosoft.com') {
+            $global:Office365Tenant = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
         }
         Else {
-            If ( !($global:Office365Tenant)) { Get-Office365Tenant }
+            If ( !($global:myOffice365Services['Office365Tenant'])) { Get-Office365Tenant }
         }
-        If ( $global:Office365CredentialsMFA) {
+        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
             Write-Host 'Connecting to SharePoint Online with Modern Authentication ..'
-            $Parms = @{'url' = "https://$($global:Office365Tenant)-admin.sharepoint.com"; 'Region' = $global:SharePointRegion}
+            $Parms = @{'url' = "https://$($global:myOffice365Services['Office365Tenant'])-admin.sharepoint.com"; 'Region' = $global:myOffice365Services['SharePointRegion']}
         }
         Else {
-            Write-Host "Connecting to SharePoint Online using $($global:Office365Credentials.username) .."
-            $Parms = @{'url' = "https://$($global:Office365Tenant)-admin.sharepoint.com"; 'Credential' = $global:Office365Credentials; 'Region' = $global:SharePointRegion}
+            Write-Host "Connecting to SharePoint Online using $($global:myOffice365Services['Office365Credentials'].username) .."
+            $Parms = @{'url' = "https://$($global:myOffice365Services['Office365Tenant'])-admin.sharepoint.com"; 'Credential' = $global:myOffice365Services['Office365Credentials']; 'Region' = $global:myOffice365Services['SharePointRegion']}
         }
         Connect-SPOService @Parms
     }
@@ -338,23 +346,23 @@ function global:Connect-SharePointOnline {
 }
 
 Function global:Get-Office365Credentials {
-    $global:Office365Credentials = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
+    $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
     If ( (Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule') -or (Get-Module -Name 'MicrosoftTeams') -or
         ((Get-Module -Name 'SkypeOnlineConnector' -ListAvailable) -and [System.Version]((Get-Module -Name 'SkypeOnlineConnector' -ListAvailable).Version.Build) -ge [System.Version]'7.0' ) -or
         ((Get-Module -Name 'Microsoft.Online.Sharepoint.PowerShell' -ListAvailable) -and [System.Version]((Get-Module -Name 'Microsoft.Online.Sharepoint.PowerShell' -ListAvailable).Version.Build) -ge [System.Version]'16.0' )) {
-        $global:Office365CredentialsMFA = Get-MultiFactorAuthenticationUsage
+        $global:myOffice365Services['Office365CredentialsMFA'] = Get-MultiFactorAuthenticationUsage
     }
     Else {
-        $global:Office365CredentialsMFA = $false
+        $global:myOffice365Services['Office365CredentialsMFA'] = $false
     }
 }
 
 Function global:Get-OnPremisesCredentials {
-    $global:OnPremisesCredentials = $host.ui.PromptForCredential('On-Premises Credentials', 'Please Enter Your On-Premises Credentials', '', '')
+    $global:myOffice365Services['OnPremisesCredentials'] = $host.ui.PromptForCredential('On-Premises Credentials', 'Please Enter Your On-Premises Credentials', '', '')
 }
 
 Function global:Get-Office365Tenant {
-    $global:Office365Tenant = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
+    $global:myOffice365Services['Office365Tenant'] = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
 }
 
 function global:Connect-Office365 {
@@ -422,7 +430,7 @@ ForEach ( $local:Function in $local:Functions) {
                     If ( $outdated -and $local:OnlineModuleAutoUpdate) {
                         if ( $local:IsAdmin) {
                             Try {
-                                Write-Host ' .. Upgrading ..' -ForegroundColor White -NoNewline
+                                Write-Host ' .. Updating ..' -ForegroundColor White -NoNewline
                                 # Update to latest and greatest ..
                                 Update-Module -Name $local:Item[3] -ErrorAction Stop -Force -Confirm:$false
                                 # Uninstall all old versions of the module
