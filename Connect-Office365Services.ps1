@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.94, May 15th, 2018
+    Version 1.95, May 24th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -80,6 +80,7 @@
     1.94    Moved all global vars into one global hashtable (myOffice365Services)
             Updated AzureAD preview info (v2.0.1.11)
             Updated AzureAD info (v2.0.1.10)
+    1.95    Fixed version checking issue in Get-Office365Credentials
 
             
     .DESCRIPTION
@@ -347,9 +348,22 @@ function global:Connect-SharePointOnline {
 
 Function global:Get-Office365Credentials {
     $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
-    If ( (Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule') -or (Get-Module -Name 'MicrosoftTeams') -or
-        ((Get-Module -Name 'SkypeOnlineConnector' -ListAvailable) -and [System.Version]((Get-Module -Name 'SkypeOnlineConnector' -ListAvailable).Version.Build) -ge [System.Version]'7.0' ) -or
-        ((Get-Module -Name 'Microsoft.Online.Sharepoint.PowerShell' -ListAvailable) -and [System.Version]((Get-Module -Name 'Microsoft.Online.Sharepoint.PowerShell' -ListAvailable).Version.Build) -ge [System.Version]'16.0' )) {
+    $local:MFAenabledModulePresence= $false
+    # Check for MFA-enabled modules 
+    If ( (Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule') -or (Get-Module -Name 'MicrosoftTeams')) {
+        $local:MFAenabledModulePresence= $true
+    }
+    Else {
+        # Check for MFA-enabled modules with version dependency
+        $MFAMods= @('SkypeOnlineConnector|7.0', 'Microsoft.Online.Sharepoint.PowerShell|16.0')
+	ForEach( $MFAMod in $MFAMods) {
+            $local:Item = ($local:MFAMod).split('|')
+            If( (Get-Module -Name $Item[0] -ListAvailable)) {
+                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ([System.Version]((Get-Module -Name $Item[0] -ListAvailable).Version.Build) -ge [System.Version]$Item[1] )
+            }
+        }
+    }
+    If( $local:MFAEnabledModulePresence) {
         $global:myOffice365Services['Office365CredentialsMFA'] = Get-MultiFactorAuthenticationUsage
     }
     Else {
