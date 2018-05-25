@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.95, May 24th, 2018
+    Version 1.96, May 26th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -81,7 +81,8 @@
             Updated AzureAD preview info (v2.0.1.11)
             Updated AzureAD info (v2.0.1.10)
     1.95    Fixed version checking issue in Get-Office365Credentials
-
+    1.96    Updated AzureADv1 (MSOnline) info (v1.1.183.8)
+            Fixed Skype & SharePoint Module version checking in Get-Office365Credentials()
             
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -126,7 +127,7 @@ $local:Functions = @(
     'Connect|Exchange Online|Connect-ExchangeOnline',
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
-    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.166.0',
+    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.8',
     'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.1.10',
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.1.11',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.microsoft.com/en-us/download/details.aspx?id=30339',
@@ -358,8 +359,8 @@ Function global:Get-Office365Credentials {
         $MFAMods= @('SkypeOnlineConnector|7.0', 'Microsoft.Online.Sharepoint.PowerShell|16.0')
 	ForEach( $MFAMod in $MFAMods) {
             $local:Item = ($local:MFAMod).split('|')
-            If( (Get-Module -Name $Item[0] -ListAvailable)) {
-                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ([System.Version]((Get-Module -Name $Item[0] -ListAvailable).Version.Build) -ge [System.Version]$Item[1] )
+            If( (Get-Module -Name $local:Item[0] -ListAvailable)) {
+                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge [System.Version]$local:Item[1] )
             }
         }
     }
