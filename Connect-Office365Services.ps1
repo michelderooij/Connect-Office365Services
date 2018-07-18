@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98, June 29th, 2018
+    Version 1.98.1, July 18th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -89,6 +89,7 @@
             Updated AzureAD info (v2.0.1.16)
             Fixed Azure RMS location + info (v2.13.1.0)
             Added SharePoint PnP Online (detection only)
+    1.98.1  Fixed Connect-ComplianceCenter 
       
             
     .DESCRIPTION
@@ -240,8 +241,7 @@ function global:Connect-ComplianceCenter {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
         Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
-        $global:myOffice365Services['Session365'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-        New-IPPSSession -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        Connect-IPPSSession -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
         Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) .."
