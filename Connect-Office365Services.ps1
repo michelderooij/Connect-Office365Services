@@ -89,7 +89,7 @@
             Updated AzureAD info (v2.0.1.16)
             Fixed Azure RMS location + info (v2.13.1.0)
             Added SharePoint PnP Online (detection only)
-    1.98.1  Fixed Connect-ComplianceCenter 
+    1.98.1  Fixed Connect-ComplianceCenter function
       
             
     .DESCRIPTION
@@ -121,7 +121,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98'
+Write-Host 'Loading Connect-Office365Services v1.98.1'
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2440.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
