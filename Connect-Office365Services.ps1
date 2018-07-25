@@ -90,7 +90,8 @@
             Fixed Azure RMS location + info (v2.13.1.0)
             Added SharePoint PnP Online (detection only)
     1.98.1  Fixed Connect-ComplianceCenter function
-      
+    1.98.2  Updated Exchange Online info (16.0.2433.0 - 2440 seems pulled)
+            Added x86 notice (not all modules available for x86 platform)
             
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -121,12 +122,18 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.1'
+Write-Host 'Loading Connect-Office365Services v1.98.2'
+If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
+    Write-Host 'Running on x64 operating system'
+}
+Else {
+    Write-Host 'Running on x86 operating system: Not all modules available for x86 platform' -ForegroundColor Yellow
+}
 
-$local:ExoPSSessionModuleVersion_Recommended = '16.00.2440.000'
+$local:ExoPSSessionModuleVersion_Recommended = '16.00.2433.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
-$local:OnlineModuleAutoUpdate = $false
+$local:OnlineModuleVersionChecks = $true
+$local:OnlineModuleAutoUpdate = $true
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
 Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
