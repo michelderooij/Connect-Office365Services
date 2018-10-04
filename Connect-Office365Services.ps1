@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.3, September 14th, 2018
+    Version 1.98.4, October 4th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -95,7 +95,12 @@
     1.98.3  Updated Exchange Online info (16.00.2528.000)
             Updated SharePoint Online info (v16.0.8029.0)
             Updated Microsoft Online info (1.1.183.17)
-
+    1.98.4  Updated AzureAD Preview info (2.0.2.3)
+            Updated SharePoint Online info (16.0.8119.0)
+            Updated Exchange Online info (16.00.2603.000)
+            Updated MSOnline info (1.1.183.17)
+            Updated AzureAD info (2.2.2.2)
+            Updated SharePointPnPOnline (3.1.1809.0)
             
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -126,7 +131,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.3'
+Write-Host 'Loading Connect-Office365Services v1.98.4'
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
 }
@@ -134,7 +139,7 @@ Else {
     Write-Host 'Running on x86 operating system: Not all modules available for x86 platform' -ForegroundColor Yellow
 }
 
-$local:ExoPSSessionModuleVersion_Recommended = '16.00.2528.000'
+$local:ExoPSSessionModuleVersion_Recommended = '16.00.2603.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 $local:OnlineModuleVersionChecks = $false
 $local:OnlineModuleAutoUpdate = $false
@@ -146,14 +151,14 @@ $local:Functions = @(
     'Connect|Exchange Online|Connect-ExchangeOnline',
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
-    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.8',
-    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.1.16',
+    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.17',
+    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.2',
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.1.18',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.7521.1200',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.3'
-    'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|2.27.1806.1',
+    'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.1.1809.0',
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
     'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
