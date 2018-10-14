@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.4, October 4th, 2018
+    Version 1.98.5, October 14th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -101,6 +101,7 @@
             Updated MSOnline info (1.1.183.17)
             Updated AzureAD info (2.2.2.2)
             Updated SharePointPnPOnline (3.1.1809.0)
+    1.98.5  Added display of Tenant ID after providing credentials
             
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -174,6 +175,35 @@ $global:myOffice365Services=@{}
 # Local Exchange session options
 $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
 
+function global:Get-TenantIDfromMail {
+    param(
+        [string]$mail
+    )
+    $domainPart= ($mail -split '@')[1]
+    If( $domainPart) {
+        $doc= Invoke-WebRequest -Uri ('https://login.microsoft.com/{0}/FederationMetadata/2007-06/FederationMetadata.xml' -f $domainPart)
+        $GUIDmatch= $doc -match 'sts\.windows\.net\/(?<TenantID>[0-9a-f-]*)'
+        If( $doc -and $GUIDmatch) {
+             $global:myOffice365Services['TenantID']= $matches.TenantID
+        }
+        Else {
+            Write-Warning 'Could not determine Tenant ID using e-mail address'
+            $global:myOffice365Services['TenantID']= $null
+        }
+    }
+    Else {
+        Write-Warning 'E-mail address invalid, cannot determine Tenant ID'
+        $global:myOffice365Services['TenantID']= $null
+    }
+}
+
+function global:Get-TenantID {
+    Get-TenantIDfromMail $myOffice365Services['Office365Credentials'].UserName
+    If( $global:myOffice365Services['TenantID']) {
+        Write-Host ('TenantID: {0}' -f $global:myOffice365Services['TenantID'])
+    }
+}
+
 function global:Set-Office365Environment {
     param(
         [ValidateSet('Germany', 'China', 'AzurePPE', 'USGovernment', 'Default')]
@@ -238,7 +268,9 @@ function global:Connect-ExchangeOnline {
         Write-Host "Connecting to Exchange Online using $($global:myOffice365Services['Office365Credentials'].username) .."
         $global:myOffice365Services['Session365'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
-    If ( $global:myOffice365Services['Session365'] ) {Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber}
+    If ( $global:myOffice365Services['Session365'] ) {
+        Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
+    }
 }
 
 function global:Connect-ExchangeOnPremises {
@@ -339,7 +371,9 @@ function global:Connect-SkypeOnline {
             $Parms = @{'Credential' = $global:myOffice365Services['Office365Credentials']}
         }
         $global:myOffice365Services['SessionSFB'] = New-CsOnlineSession @Parms
-        If ( $global:myOffice365Services['SessionSFB'] ) {Import-PSSession -Session $global:myOffice365Services['SessionSFB'] -AllowClobber}
+        If ( $global:myOffice365Services['SessionSFB'] ) {
+            Import-PSSession -Session $global:myOffice365Services['SessionSFB'] -AllowClobber
+        }
     }
     Else {
         Write-Error -Message 'Cannot connect to Skype for Business Online - problem loading module.'
@@ -394,6 +428,7 @@ Function global:Get-Office365Credentials {
     Else {
         $global:myOffice365Services['Office365CredentialsMFA'] = $false
     }
+    Get-TenantID
 }
 
 Function global:Get-OnPremisesCredentials {
