@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.6, October 14th, 2018
+    Version 1.98.7, October 14th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -105,6 +105,7 @@
     1.98.6  Updated Teams info (0.9.5)
             Updated AzureAD Preview info (2.0.2.5)
             Updated SharePoint Online info (3.2.1810.0)
+    1.98.7  Modified Module Updating routing
             
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -135,7 +136,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.6'
+Write-Host 'Loading Connect-Office365Services v1.98.7'
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
 }
@@ -501,38 +502,38 @@ ForEach ( $local:Function in $local:Functions) {
             $local:Version = ($local:Module).Version[0]
             Write-Host "$($local:Item[4]) module installed (v$($local:Version))" -ForegroundColor Green -NoNewline
             If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
-                Try {
-                    $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction Stop
-                    $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
-                    If ( $outdated -and $local:OnlineModuleAutoUpdate) {
-                        if ( $local:IsAdmin) {
-                            Try {
-                                Write-Host ' .. Updating ..' -ForegroundColor White -NoNewline
-                                # Update to latest and greatest ..
-                                Update-Module -Name $local:Item[3] -ErrorAction Stop -Force -Confirm:$false
-                                # Uninstall all old versions of the module
-                                Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
-                                Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
-                            }
-                            Catch {
-                                Write-Host ' ERROR UPDATING (try manual update)' -ForegroundColor RED
-                            }
+                $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction SilentlyContinue
+                $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
+                If ($OnlineModule -and $outdated -and $local:OnlineModuleAutoUpdate) {
+                    if ( $local:IsAdmin) {
+                        Try {
+                            Write-Host '.. Updating ' -ForegroundColor White -NoNewline
+                            Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false
+                        }
+                        Catch {
+                            # Uh oh
+                        }
+                        If( Get-Module -Name $local:Item[3] -ListAvailable | Where-Object {[System.Version]$_.Version -ge [System.Version]$OnlineModule.version}) {
+                            Write-Host '.. Cleanup' -ForegroundColor White -NoNewline
+                            # Uninstall all old versions of the module
+                            Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
+                            Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
                         }
                         Else {
-                            Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
+                            Write-Host ' PROBLEM UPDATING' -ForegroundColor RED
                         }
                     }
                     Else {
-                        If ( $outdated) {
-                            Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
-                        }
-                        Else {
-                            Write-Host ''
-                        }
+                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
                     }
                 }
-                Catch {
-                    Write-Host ''
+                Else {
+                    If ( $outdated) {
+                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
+                    }
+                    Else {
+                        Write-Host ''
+                    }
                 }
             }
             Else {
