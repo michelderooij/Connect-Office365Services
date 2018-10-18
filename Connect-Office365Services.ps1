@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.5, October 14th, 2018
+    Version 1.98.6, October 14th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -539,7 +539,7 @@ ForEach ( $local:Function in $local:Functions) {
                 # Check if we have a last known version
                 If ( $local:Item[6]) {
                     $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
-                    If ( $outdated -and $local:OnlineModuleAutoUpdate) {
+                    If ( $outdated) {
                         Write-Host (' OUTDATED (v{0} expected)' -f [System.Version]$local:item[6]) -ForegroundColor Red
                     }
                     Else {
