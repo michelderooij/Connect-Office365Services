@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.7, October 14th, 2018
+    Version 1.98.8, November 11th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -88,7 +88,7 @@
             Updated AzureAD Preview info (v2.0.1.18)
             Updated AzureAD info (v2.0.1.16)
             Fixed Azure RMS location + info (v2.13.1.0)
-            Added SharePoint PnP Online (detection only)
+            Added SharePointPnP Online (detection only)
     1.98.1  Fixed Connect-ComplianceCenter function
     1.98.2  Updated Exchange Online info (16.0.2433.0 - 2440 seems pulled)
             Added x86 notice (not all modules available for x86 platform)
@@ -100,12 +100,15 @@
             Updated Exchange Online info (16.00.2603.000)
             Updated MSOnline info (1.1.183.17)
             Updated AzureAD info (2.2.2.2)
-            Updated SharePointPnPOnline info (3.1.1809.0)
+            Updated SharePointPnP Online info (3.1.1809.0)
     1.98.5  Added display of Tenant ID after providing credentials
     1.98.6  Updated Teams info (0.9.5)
             Updated AzureAD Preview info (2.0.2.5)
-            Updated SharePoint Online info (3.2.1810.0)
+            Updated SharePointPnP Online info (3.2.1810.0)
     1.98.7  Modified Module Updating routing
+    1.98.8  Updated SharePoint Online info (16.0.8212.0)
+            Added changing console title to Tenant info
+            Rewrite initializing to make it manageable from profile
             
     .DESCRIPTION
     The functions are listed below. Note that functions may call eachother, for example to
@@ -136,7 +139,8 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.7'
+Write-Host 'Loading Connect-Office365Services v1.98.8 ..'
+
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
 }
@@ -146,11 +150,8 @@ Else {
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.00.2603.000'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
-$local:OnlineModuleVersionChecks = $false
-$local:OnlineModuleAutoUpdate = $false
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
-Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
 
 $local:Functions = @(
     'Connect|Exchange Online|Connect-ExchangeOnline',
@@ -161,7 +162,7 @@ $local:Functions = @(
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.5',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
-    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.7521.1200',
+    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.8212.0',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.5'
     'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
     'Settings|Office 365 Credentials|Get-Office365Credentials',
@@ -173,11 +174,17 @@ $local:Functions = @(
 $local:CreateISEMenu = $psISE -and -not [System.Windows.Input.Keyboard]::IsKeyDown( [System.Windows.Input.Key]::LeftShift)
 If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
 
-# Initialize global state variable
-$global:myOffice365Services=@{}
+# Initialize global state variable when needed
+If( -not( Get-Variable myOffice365Services -ErrorAction SilentlyContinue )) { $global:myOffice365Services=@{} }
+
+# Online checks & Updating
+If( Get-Variable OnlineModuleVersionChecks -ErrorAction SilentlyContinue ) { $local:OnlineModuleVersionChecks = $OnlineModuleVersionChecks } else { $local:OnlineModuleVersionChecks= $false }
+If( Get-Variable OnlineModuleAutoUpdate -ErrorAction SilentlyContinue ) { $local:OnlineModuleAutoUpdate = $OnlineModuleAutoUpdate } else { $local:OnlineModuleAutoUpdate= $false }
 
 # Local Exchange session options
 $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
+
+Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
 
 function global:Get-TenantIDfromMail {
     param(
@@ -188,23 +195,26 @@ function global:Get-TenantIDfromMail {
         $doc= Invoke-WebRequest -Uri ('https://login.microsoft.com/{0}/FederationMetadata/2007-06/FederationMetadata.xml' -f $domainPart)
         $GUIDmatch= $doc -match 'sts\.windows\.net\/(?<TenantID>[0-9a-f-]*)'
         If( $doc -and $GUIDmatch) {
-             $global:myOffice365Services['TenantID']= $matches.TenantID
+             $res= $matches.TenantID
         }
         Else {
             Write-Warning 'Could not determine Tenant ID using e-mail address'
-            $global:myOffice365Services['TenantID']= $null
+            $res= $null
         }
     }
     Else {
         Write-Warning 'E-mail address invalid, cannot determine Tenant ID'
-        $global:myOffice365Services['TenantID']= $null
+        $res= $null
     }
+    return $res
 }
 
 function global:Get-TenantID {
-    Get-TenantIDfromMail $myOffice365Services['Office365Credentials'].UserName
+    $global:myOffice365Services['TenantID']= Get-TenantIDfromMail $myOffice365Services['Office365Credentials'].UserName
     If( $global:myOffice365Services['TenantID']) {
         Write-Host ('TenantID: {0}' -f $global:myOffice365Services['TenantID'])
+        $global:myOffice365Services['TenantID']
+        $host.ui.RawUI.WindowTitle = '{0} - {1}' -f $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
     }
 }
 
