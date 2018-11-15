@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.8, November 11th, 2018
+    Version 1.98.81, November 15th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -23,9 +23,34 @@
 
     .LINK
     http://eightwone.com
+            
+    .DESCRIPTION
+    The functions are listed below. Note that functions may call eachother, for example to
+    connect to Exchange Online the Office 365 Credentials the user is prompted to enter these credentials.
+    Also, the credentials are persistent in the current session, there is no need to re-enter credentials
+    when connecting to Exchange Online Protection for example. Should different credentials be required,
+    call Get-Office365Credentials or Get-OnPremisesCredentials again.
 
-    Revision History
-    ---------------------------------------------------------------------
+    - Connect-AzureActiveDirectory	    Connects to Azure Active Directory
+    - Connect-AzureRMS           	    Connects to Azure Rights Management
+    - Connect-ExchangeOnline     	    Connects to Exchange Online
+    - Connect-SkypeOnline        	    Connects to Skype for Business Online
+    - Connect-EOP                	    Connects to Exchange Online Protection
+    - Connect-ComplianceCenter   	    Connects to Compliance Center
+    - Connect-SharePointOnline   	    Connects to SharePoint Online
+    - Connect-MSTeams                   Connects to Microsoft Teams
+    - Get-Office365Credentials    	    Gets Office 365 credentials
+    - Connect-ExchangeOnPremises 	    Connects to Exchange On-Premises
+    - Get-OnPremisesCredentials    	    Gets On-Premises credentials
+    - Get-ExchangeOnPremisesFQDN        Gets FQDN for Exchange On-Premises
+    - Get-Office365Tenant		        Gets Office 365 tenant name
+    - Set-Office365Environment		    Configures Uri's and region to use
+
+    .EXAMPLE
+    .\Microsoft.PowerShell_profile.ps1
+    Defines functions in current shell or ISE session (when $profile contains functions or is replaced with script).
+
+    .HISTORY
     1.2	    Community release
     1.3     Updated required version of Online Sign-In Assistant
     1.4	    Added (in-code) AzureEnvironment (Connect-AzureAD)
@@ -109,37 +134,12 @@
     1.98.8  Updated SharePoint Online info (16.0.8212.0)
             Added changing console title to Tenant info
             Rewrite initializing to make it manageable from profile
-            
-    .DESCRIPTION
-    The functions are listed below. Note that functions may call eachother, for example to
-    connect to Exchange Online the Office 365 Credentials the user is prompted to enter these credentials.
-    Also, the credentials are persistent in the current session, there is no need to re-enter credentials
-    when connecting to Exchange Online Protection for example. Should different credentials be required,
-    call Get-Office365Credentials or Get-OnPremisesCredentials again.
-
-    - Connect-AzureActiveDirectory	    Connects to Azure Active Directory
-    - Connect-AzureRMS           	    Connects to Azure Rights Management
-    - Connect-ExchangeOnline     	    Connects to Exchange Online
-    - Connect-SkypeOnline        	    Connects to Skype for Business Online
-    - Connect-EOP                	    Connects to Exchange Online Protection
-    - Connect-ComplianceCenter   	    Connects to Compliance Center
-    - Connect-SharePointOnline   	    Connects to SharePoint Online
-    - Connect-MSTeams                       Connects to Microsoft Teams
-    - Get-Office365Credentials    	    Gets Office 365 credentials
-    - Connect-ExchangeOnPremises 	    Connects to Exchange On-Premises
-    - Get-OnPremisesCredentials    	    Gets On-Premises credentials
-    - Get-ExchangeOnPremisesFQDN            Gets FQDN for Exchange On-Premises
-    - Get-Office365Tenant		    Gets Office 365 tenant name
-    - Set-Office365Environment		    Configures Uri's and region to use
-
-    .EXAMPLES
-    .\Microsoft.PowerShell_profile.ps1
-    Defines functions in current shell or ISE session (when $profile contains functions or is replaced with script).
+    1.98.81 Updated Exchange Online info (16.0.2642.0)
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.8 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.81 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -148,7 +148,7 @@ Else {
     Write-Host 'Running on x86 operating system: Not all modules available for x86 platform' -ForegroundColor Yellow
 }
 
-$local:ExoPSSessionModuleVersion_Recommended = '16.00.2603.000'
+$local:ExoPSSessionModuleVersion_Recommended = '16.0.2642.0'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
@@ -178,7 +178,7 @@ If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
 If( -not( Get-Variable myOffice365Services -ErrorAction SilentlyContinue )) { $global:myOffice365Services=@{} }
 
 # Online checks & Updating
-If( Get-Variable OnlineModuleVersionChecks -ErrorAction SilentlyContinue ) { $local:OnlineModuleVersionChecks = $OnlineModuleVersionChecks } else { $local:OnlineModuleVersionChecks= $false }
+If( Get-Variable OnlineModuleVersionChecks -ErrorAction SilentlyContinue ) { $local:OnlineModuleVersionChecks = $OnlineModuleVersionChecks } else { $local:OnlineModuleVersionChecks= $false}
 If( Get-Variable OnlineModuleAutoUpdate -ErrorAction SilentlyContinue ) { $local:OnlineModuleAutoUpdate = $OnlineModuleAutoUpdate } else { $local:OnlineModuleAutoUpdate= $false }
 
 # Local Exchange session options
@@ -213,7 +213,6 @@ function global:Get-TenantID {
     $global:myOffice365Services['TenantID']= Get-TenantIDfromMail $myOffice365Services['Office365Credentials'].UserName
     If( $global:myOffice365Services['TenantID']) {
         Write-Host ('TenantID: {0}' -f $global:myOffice365Services['TenantID'])
-        $global:myOffice365Services['TenantID']
         $host.ui.RawUI.WindowTitle = '{0} - {1}' -f $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
     }
 }
@@ -551,7 +550,7 @@ ForEach ( $local:Function in $local:Functions) {
                 If ( $local:Item[6]) {
                     $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
                     If ( $outdated) {
-                        Write-Host (' OUTDATED (v{0} expected)' -f [System.Version]$local:item[6]) -ForegroundColor Red
+                        Write-Host (' OUTDATED (v{0})' -f [System.Version]$local:item[6]) -ForegroundColor Red
                     }
                     Else {
                         Write-Host ''
