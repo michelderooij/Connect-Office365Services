@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.82, November 23rd, 2018
+    Version 1.98.81, November 15th, 2018
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -135,7 +135,6 @@
             Added changing console title to Tenant info
             Rewrite initializing to make it manageable from profile
     1.98.81 Updated Exchange Online info (16.0.2642.0)
-    1.98.82 Fixed connecting to Compliance Center
 #>
 
 #Requires -Version 3.0
@@ -303,15 +302,15 @@ function global:Connect-ComplianceCenter {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
         Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
-        $global:myOffice365Services['SessionCC'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        $global:myOffice365Services['SessionCC'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
         Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) .."
-        $global:myOffice365Services['SessionCC'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.compliance.protection.outlook.com/powershell-liveid/' -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
+        $global:myOffice365Services['SessionCC'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
         If ( $global:myOffice365Services['SessionCC'] ) {Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber}
     }
     If ( $global:myOffice365Services['SessionCC'] ) {
-        Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
+        Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber
     }    
 }
 
