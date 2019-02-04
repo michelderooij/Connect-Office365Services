@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.81, November 15th, 2018
+    Version 1.98.82, February 4th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -135,11 +135,15 @@
             Added changing console title to Tenant info
             Rewrite initializing to make it manageable from profile
     1.98.81 Updated Exchange Online info (16.0.2642.0)
+    1.98.82 Updated AzureAD info (2.0.2.4)
+            Updated MicrosoftTeams info (0.9.6)
+            Updated SharePoint Online info (16.0.8525.1200)
+            Revised module auto-updating
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.81 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.82 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -158,12 +162,12 @@ $local:Functions = @(
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
     'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.17',
-    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.2',
+    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.4',
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.5',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.0.0',
-    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.microsoft.com/en-us/download/details.aspx?id=35588|16.0.8212.0',
-    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.5'
+    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.8525.1200',
+    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|0.9.6'
     'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
@@ -301,11 +305,11 @@ Function global:Get-ExchangeOnPremisesFQDN {
 function global:Connect-ComplianceCenter {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        Write-Host "Connecting to Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
         $global:myOffice365Services['SessionCC'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
-        Write-Host "Connecting to Office 365 Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Write-Host "Connecting to Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) .."
         $global:myOffice365Services['SessionCC'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
         If ( $global:myOffice365Services['SessionCC'] ) {Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber}
     }
@@ -510,29 +514,27 @@ ForEach ( $local:Function in $local:Functions) {
             Catch {Write-Warning -Message $_}
         }
         If ( $local:Item[3]) {
-            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable
+            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select -First 1
             $local:Version = ($local:Module).Version[0]
-            Write-Host "$($local:Item[4]) module installed (v$($local:Version))" -ForegroundColor Green -NoNewline
+            Write-Host "Found $($local:Item[4]) module (v$($local:Version))" -ForegroundColor Green -NoNewline
             If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
                 $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction SilentlyContinue
                 $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
                 If ($OnlineModule -and $outdated -and $local:OnlineModuleAutoUpdate) {
                     if ( $local:IsAdmin) {
-                        Try {
-                            Write-Host '.. Updating ' -ForegroundColor White -NoNewline
-                            Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false
-                        }
-                        Catch {
-                            # Uh oh
-                        }
-                        If( Get-Module -Name $local:Item[3] -ListAvailable | Where-Object {[System.Version]$_.Version -ge [System.Version]$OnlineModule.version}) {
-                            Write-Host '.. Cleanup' -ForegroundColor White -NoNewline
-                            # Uninstall all old versions of the module
-                            Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
-                            Write-Host (' UPDATED (v{0})' -f [System.Version]$OnlineModule.version) -ForegroundColor Yellow
+                        Write-Host ('.. Update to {0}' -f [System.Version]$OnlineModule.version) -ForegroundColor White -NoNewline
+                        Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false
+                        # Uninstall all old versions of the module
+                        Write-Host '.. Cleanup' -ForegroundColor White -NoNewline
+                        Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
+
+                        $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select -First 1
+                        $local:Version = ($local:Module).Version[0]
+                        If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
+                            Write-Host (' UPDATED (v{0})' -f [System.Version]$local:Version) -ForegroundColor Green
                         }
                         Else {
-                            Write-Host ' PROBLEM UPDATING' -ForegroundColor RED
+                            Write-Host ' ERROR' -ForegroundColor RED
                         }
                     }
                     Else {
