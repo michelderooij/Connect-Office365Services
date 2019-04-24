@@ -146,7 +146,7 @@
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.82 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.83 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
