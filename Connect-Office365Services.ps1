@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.84, May 2nd, 2019
+    Version 1.99, July 22th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -143,11 +143,13 @@
             Updated AzureAD v2 Preview info (2.0.2.17)
             Updated SharePoint Online info (16.0.8715.1200)
     1.98.84 Updated Skype for Business Online info (7.0.1994.0)
+    1.98.85 Updated SharePoint Online info (16.0.8924.1200)
+            Fixed setting Tenant Name for Connect-SharePointOnline
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.84 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.85 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -170,7 +172,7 @@ $local:Functions = @(
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.17',
     'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.8715.1200',
+    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.8924.1200',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.0'
     'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
     'Settings|Office 365 Credentials|Get-Office365Credentials',
@@ -409,7 +411,7 @@ function global:Connect-SharePointOnline {
     If ( Get-Module -Name Microsoft.Online.Sharepoint.PowerShell) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         If (($global:myOffice365Services['Office365Credentials']).username -like '*.onmicrosoft.com') {
-            $global:Office365Tenant = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
+            $global:myOffice365Services['Office365Tenant'] = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
         }
         Else {
             If ( !($global:myOffice365Services['Office365Tenant'])) { Get-Office365Tenant }
@@ -518,7 +520,7 @@ ForEach ( $local:Function in $local:Functions) {
             Catch {Write-Warning -Message $_}
         }
         If ( $local:Item[3]) {
-            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select -First 1
+            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
             $local:Version = ($local:Module).Version[0]
             Write-Host "Found $($local:Item[4]) module (v$($local:Version))" -ForegroundColor Green -NoNewline
             If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
@@ -532,7 +534,7 @@ ForEach ( $local:Function in $local:Functions) {
                         Write-Host '.. Cleanup' -ForegroundColor White -NoNewline
                         Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
 
-                        $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select -First 1
+                        $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                         $local:Version = ($local:Module).Version[0]
                         If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
                             Write-Host (' UPDATED (v{0})' -f [System.Version]$local:Version) -ForegroundColor Green
