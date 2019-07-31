@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.99, July 22th, 2019
+    Version 1.98.86, July 31st, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -145,11 +145,12 @@
     1.98.84 Updated Skype for Business Online info (7.0.1994.0)
     1.98.85 Updated SharePoint Online info (16.0.8924.1200)
             Fixed setting Tenant Name for Connect-SharePointOnline
+    1.99.86 Updated Exchange Online info (16.0.3054.0)
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.85 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.86 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -158,7 +159,7 @@ Else {
     Write-Host 'Running on x86 operating system: Not all modules available for x86 platform' -ForegroundColor Yellow
 }
 
-$local:ExoPSSessionModuleVersion_Recommended = '16.0.2642.0'
+$local:ExoPSSessionModuleVersion_Recommended = '16.0.3054.0'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
