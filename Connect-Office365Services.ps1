@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.86, July 31st, 2019
+    Version 1.98.88, August 9th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -146,11 +146,16 @@
     1.98.85 Updated SharePoint Online info (16.0.8924.1200)
             Fixed setting Tenant Name for Connect-SharePointOnline
     1.99.86 Updated Exchange Online info (16.0.3054.0)
+    1.99.87 Replaced 'not detected' with 'not found' for esthetics
+    1.99.88 Replaced AADRM module functionality with AIPModule
+            Updated AzureAD info (2.0.2.31)
+            Added PowerApps modules (preview)
+            Fixed handling when ExoPS module isn't installed
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.86 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.88 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -171,11 +176,14 @@ $local:Functions = @(
     'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.17',
     'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.4',
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.17',
-    'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
+    'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
+    #    'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.8924.1200',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.0'
     'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
+    'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.6',
+    'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
     'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
@@ -375,14 +383,14 @@ function global:Connect-AzureActiveDirectory {
     }
 }
 
-function global:Connect-AzureRMS {
-    If ( !(Get-Module -Name AADRM)) {Import-Module -Name AADRM -ErrorAction SilentlyContinue}
-    If ( Get-Module -Name AADRM) {
+function global:Connect-AIP {
+    If ( !(Get-Module -Name AIPService)) {Import-Module -Name AIPService -ErrorAction SilentlyContinue}
+    If ( Get-Module -Name AIPService) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        Write-Host "Connecting to Azure RMS using $($global:myOffice365Services['Office365Credentials'].username) .."
-        Connect-AadrmService -Credential $global:myOffice365Services['Office365Credentials']
+        Write-Host "Connecting to Azure Information Protection using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Connect-AipService -Credential $global:myOffice365Services['Office365Credentials'] 
     }
-    Else {Write-Error -Message 'Cannot connect to Azure RMS - problem loading module.'}
+    Else {Write-Error -Message 'Cannot connect to Azure Information Protection - problem loading module.'}
 }
 
 function global:Connect-SkypeOnline {
@@ -431,6 +439,25 @@ function global:Connect-SharePointOnline {
         Write-Error -Message 'Cannot connect to SharePoint Online - problem loading module.'
     }
 }
+function global:Connect-PowerApps {
+    If ( !(Get-Module -Name Microsoft.PowerApps.PowerShell)) {Import-Module -Name Microsoft.PowerApps.PowerShell -ErrorAction SilentlyContinue}
+    If ( !(Get-Module -Name Microsoft.PowerApps.Administration.PowerShell)) {Import-Module -Name Microsoft.PowerApps.Administration.PowerShell -ErrorAction SilentlyContinue}
+    If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        Write-Host "Connecting to PowerApps using $($global:myOffice365Services['Office365Credentials'].username) .."
+        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+            $Parms = @{'Username' = $global:myOffice365Services['Office365Credentials'].UserName }
+        }
+        Else {
+            $Parms = @{'Username' = $global:myOffice365Services['Office365Credentials'].UserName; 'Password'= $global:myOffice365Services['Office365Credentials'].Password }
+        }
+        Add-PowerAppsAccount @Parms
+    }
+    Else {
+        Write-Error -Message 'Cannot connect to SharePoint Online - problem loading module.'
+    }
+}
+
 
 Function global:Get-Office365Credentials {
     $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
@@ -483,7 +510,7 @@ Set-Office365Environment -AzureEnvironment 'Default'
 #Scan for Exchange & SCC MFA PowerShell module presence
 $local:ExchangeMFAModule = 'Microsoft.Exchange.Management.ExoPowershellModule'
 $local:ExchangeADALModule = 'Microsoft.IdentityModel.Clients.ActiveDirectory'
-$local:ModuleList = @(Get-ChildItem -Path "$($env:LOCALAPPDATA)\Apps\2.0" -Filter "$($local:ExchangeMFAModule).manifest" -Recurse ) | Sort-Object LastWriteTime -Desc | Select-Object -First 1
+$local:ModuleList = @(Get-ChildItem -Path "$($env:LOCALAPPDATA)\Apps\2.0" -Filter "$($local:ExchangeMFAModule).manifest" -Recurse -ErrorAction SilentlyContinue ) | Sort-Object LastWriteTime -Desc | Select-Object -First 1
 If ( $local:ModuleList) {
     $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeMFAModule).dll"
     $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
@@ -575,7 +602,7 @@ ForEach ( $local:Function in $local:Functions) {
         }
     }
     Else {
-        Write-Host "$($local:Item[4]) module not detected ($($local:Item[5]))" -ForegroundColor Yellow
+        Write-Host "$($local:Item[4]) module not found ($($local:Item[5]))" -ForegroundColor Yellow
     }
 }
 
