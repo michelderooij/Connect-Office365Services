@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.88, August 9th, 2019
+    Version 1.98.90, September 25th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -29,8 +29,10 @@
     connect to Exchange Online the Office 365 Credentials the user is prompted to enter these credentials.
     Also, the credentials are persistent in the current session, there is no need to re-enter credentials
     when connecting to Exchange Online Protection for example. Should different credentials be required,
-    call Get-Office365Credentials or Get-OnPremisesCredentials again.
+    call Get-Office365Credentials or Get-OnPremisesCredentials again. 
 
+    Helper Functions:
+    =================
     - Connect-AzureActiveDirectory	Connects to Azure Active Directory
     - Connect-AzureRMS           	Connects to Azure Rights Management
     - Connect-ExchangeOnline     	Connects to Exchange Online
@@ -45,6 +47,8 @@
     - Get-ExchangeOnPremisesFQDN        Gets FQDN for Exchange On-Premises
     - Get-Office365Tenant		Gets Office 365 tenant name
     - Set-Office365Environment		Configures Uri's and region to use
+
+    Functions to connect to other services provided by the module, e.g. Connect-MSGraph or Connect-MSTeams.
 
     .EXAMPLE
     .\Microsoft.PowerShell_profile.ps1
@@ -154,12 +158,16 @@
     1.99.89 Updated AzureAD v2 Preview info (2.0.2.32)
             Updated SPO Online info (16.0.9119.1200)
             Updated Teams info (1.0.1)
-
+    1.99.90 Added Microsoft.Intune.Graph module
+            Updated AzureAD v2 info (2.0.2.50)
+            Updated AzureAD v2 Preview info (2.0.2.51)
+            Updated SharePoint Online info (16.0.19223.12000)
+            Updated MSTeams info (1.0.2)
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.89 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.90 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -178,16 +186,17 @@ $local:Functions = @(
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
     'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.17',
-    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.31',
-    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.32',
+    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.50',
+    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.51',
     'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
     #    'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.9119.1200',
-    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.0'
+    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19223.12000',
+    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.2'
     'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
     'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.6',
     'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
+    'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
     'Settings|Office 365 Credentials|Get-Office365Credentials',
     'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
     'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
