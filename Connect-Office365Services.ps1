@@ -167,11 +167,12 @@
             Updated AzureAD v2 info (2.0.2.52)
             Updated AzureAD v2 Preview info (2.0.2.53)
             Updated SharePoint Online info (16.0.19404.12000)
+    1.99.92 Updated SharePoint Online info (16.0.19418.12000)
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.91 ..'
+Write-Host 'Loading Connect-Office365Services v1.98.92 ..'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
