@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 1.98.91, October 14th, 2019
+    Version 2.0, November 5th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -36,6 +36,7 @@
     - Connect-AzureActiveDirectory	Connects to Azure Active Directory
     - Connect-AzureRMS           	Connects to Azure Rights Management
     - Connect-ExchangeOnline     	Connects to Exchange Online
+    - Connect-ExchangeOnlinev2          Connects to Exchange Online using REST module 
     - Connect-SkypeOnline        	Connects to Skype for Business Online
     - Connect-EOP                	Connects to Exchange Online Protection
     - Connect-ComplianceCenter   	Connects to Compliance Center
@@ -168,11 +169,12 @@
             Updated AzureAD v2 Preview info (2.0.2.53)
             Updated SharePoint Online info (16.0.19404.12000)
     1.99.92 Updated SharePoint Online info (16.0.19418.12000)
+    2.00.00 Added Exchange Online Management v2 (0.3374.4)
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v1.98.92 ..'
+Write-Host 'Loading Connect-Office365Services v2.00.00'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -186,15 +188,16 @@ $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
 
+# Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion
 $local:Functions = @(
     'Connect|Exchange Online|Connect-ExchangeOnline',
+    'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.4',
     'Connect|Exchange Online Protection|Connect-EOP',
     'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
     'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.17',
     'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.52',
     'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.53',
     'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
-    #    'Connect|Azure RMS|Connect-AzureRMS|AADRM|Azure RMS|https://www.powershellgallery.com/packages/AADRM|2.13.1.0',
     'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
     'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19404.12000',
     'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.2'
@@ -317,6 +320,22 @@ function global:Connect-ExchangeOnline {
     Else {
         Write-Host "Connecting to Exchange Online using $($global:myOffice365Services['Office365Credentials'].username) .."
         $global:myOffice365Services['Session365'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
+    }
+    If ( $global:myOffice365Services['Session365'] ) {
+        Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
+    }
+}
+
+function global:Connect-ExchangeOnlinev2 {
+    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+    # Other connect options: TrackPerformance, UseMultithreading, Showprogress, EnableEXOTelemetry, LogDirectoryPath
+    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+        Write-Host "Connecting to Exchange Online (v2) using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+    }
+    Else {
+        Write-Host "Connecting to Exchange Online (v2) using $($global:myOffice365Services['Office365Credentials'].username) .."
+        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUrl $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -SessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     If ( $global:myOffice365Services['Session365'] ) {
         Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
