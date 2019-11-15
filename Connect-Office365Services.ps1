@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.0, November 5th, 2019
+    Version 2.10, November 15th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -48,6 +48,7 @@
     - Get-ExchangeOnPremisesFQDN        Gets FQDN for Exchange On-Premises
     - Get-Office365Tenant		Gets Office 365 tenant name
     - Set-Office365Environment		Configures Uri's and region to use
+    - Update-Office365Modules           Updates supported Office 365 modules
 
     Functions to connect to other services provided by the module, e.g. Connect-MSGraph or Connect-MSTeams.
 
@@ -169,12 +170,17 @@
             Updated AzureAD v2 Preview info (2.0.2.53)
             Updated SharePoint Online info (16.0.19404.12000)
     1.99.92 Updated SharePoint Online info (16.0.19418.12000)
-    2.00.00 Added Exchange Online Management v2 (0.3374.4)
+    2.00    Added Exchange Online Management v2 (0.3374.4)
+    2.10    Added Update-Office365Modules 
+            Updated MSOnline info (1.1.183.57)
+            Updated AzureAD v2 info (2.0.2.61)
+            Updated AzureAD Preview info (2.0.2.62)
+            Updated PowerApps-Admin-PowerShell info (2.0.21)
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v2.00.00'
+Write-Host 'Loading Connect-Office365Services v2.10.00'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -184,32 +190,8 @@ Else {
 }
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.0.3346.0'
-$local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
-
-# Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion
-$local:Functions = @(
-    'Connect|Exchange Online|Connect-ExchangeOnline',
-    'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.4',
-    'Connect|Exchange Online Protection|Connect-EOP',
-    'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
-    'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.17',
-    'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.52',
-    'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.53',
-    'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
-    'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-    'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19404.12000',
-    'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.2'
-    'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
-    'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.6',
-    'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
-    'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
-    'Settings|Office 365 Credentials|Get-Office365Credentials',
-    'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
-    'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
-    'Settings|Exchange On-Premises FQDN|Get-ExchangeOnPremisesFQDN'
-)
 
 $local:CreateISEMenu = $psISE -and -not [System.Windows.Input.Keyboard]::IsKeyDown( [System.Windows.Input.Key]::LeftShift)
 If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
@@ -255,6 +237,31 @@ function global:Get-TenantID {
         Write-Host ('TenantID: {0}' -f $global:myOffice365Services['TenantID'])
         $host.ui.RawUI.WindowTitle = '{0} - {1}' -f $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
     }
+}
+
+function global:Get-Office365ModuleInfo {
+    # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion
+    @(
+        'Connect|Exchange Online|Connect-ExchangeOnline',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.4',
+       'Connect|Exchange Online Protection|Connect-EOP',
+       'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
+       'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
+       'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.61',
+        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.62',
+        'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
+        'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19404.12000',
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.2'
+        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
+        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.21',
+        'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
+        'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
+        'Settings|Office 365 Credentials|Get-Office365Credentials',
+        'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
+        'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
+        'Settings|Exchange On-Premises FQDN|Get-ExchangeOnPremisesFQDN'
+    )
 }
 
 function global:Set-Office365Environment {
@@ -530,6 +537,44 @@ Function global:Get-Office365Tenant {
     $global:myOffice365Services['Office365Tenant'] = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
 }
 
+Function global:Update-Office365Modules {
+    $local:Functions= Get-Office365ModuleInfo
+    $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
+    If( $local:IsAdmin) {
+        ForEach ( $local:Function in $local:Functions) {
+            $local:Item = ($local:Function).split('|')
+            If ( $local:Item[3] -and (Get-Module -Name $local:Item[3] -ListAvailable)) {
+                $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
+                $local:Version = ($local:Module).Version[0]
+                Write-Host ('Checking {0}' -f $local:Item[4]) -ForegroundColor Green
+                $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction SilentlyContinue
+                $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
+                If ($OnlineModule -and $outdated) {
+                    Write-Host ('Updating {0} to {1}' -f $local:Item[4], [System.Version]$OnlineModule.version) -ForegroundColor White
+                    Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false
+                    # Uninstall all old versions of the module
+                    Write-Host ('Cleaning up older versions of {0}' -f $local:Item[4]) -ForegroundColor White
+                    Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { 
+                        Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White;
+                        Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force 
+                    }
+                    $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
+                    $local:Version = ($local:Module).Version[0]
+                    If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
+                        Write-Host ('Module {0} updated to {1}' -f $local:Item[4], [System.Version]$local:Version) -ForegroundColor Green
+                    }
+                    Else {
+                        Write-Host ('Problem updating {0} to {1} (current {2})' -f $local:Item[4], [System.Version]$OnlineModule.version, $local:Version) -ForegroundColor Red
+                    }
+                }
+            }
+        }
+    }
+    Else {
+        Write-Host ('Script not running with elevated privileges; cannot update modules') -ForegroundColor Yellow
+    }
+}
+
 function global:Connect-Office365 {
     Connect-AzureActiveDirectory
     Connect-AzureRMS
@@ -567,6 +612,7 @@ Else {
     Write-Verbose -Message 'Exchange Modern Authentication PowerShell Module is not installed.`nYou can download the module from EAC (Hybrid page) or via http://bit.ly/ExOPSModule'
 }
 
+$local:Functions= Get-Office365ModuleInfo
 ForEach ( $local:Function in $local:Functions) {
     $local:Item = ($local:Function).split('|')
     If ( !($local:Item[3]) -or ( Get-Module -Name $local:Item[3] -ListAvailable)) {
@@ -602,40 +648,26 @@ ForEach ( $local:Function in $local:Functions) {
                         $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                         $local:Version = ($local:Module).Version[0]
                         If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
-                            Write-Host (' UPDATED (v{0})' -f [System.Version]$local:Version) -ForegroundColor Green
+                            Write-Host (' UPDATED (v{0})' -f [System.Version]$local:Version) -ForegroundColor Green -NoNewline
                         }
                         Else {
-                            Write-Host ' ERROR' -ForegroundColor RED
+                            Write-Host ' ERROR' -ForegroundColor RED -NoNewline
                         }
                     }
                     Else {
-                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
+                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red -NoNewline
                     }
                 }
                 Else {
                     If ( $outdated) {
-                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red
-                    }
-                    Else {
-                        Write-Host ''
+                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red -NoNewline
                     }
                 }
-            }
+              }
             Else {
-                # Check if we have a last known version
-                If ( $local:Item[6]) {
-                    $outdated = [System.Version]$local:Version -lt [System.Version]$local:item[6]
-                    If ( $outdated) {
-                        Write-Host (' OUTDATED (v{0})' -f [System.Version]$local:item[6]) -ForegroundColor Red
-                    }
-                    Else {
-                        Write-Host ''
-                    }
-                }
-                Else {
-                    Write-Host ''
-                }
+                # No internet access 
             }
+            Write-Host '' # NewLine
         }
     }
     Else {
