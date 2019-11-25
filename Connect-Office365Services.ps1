@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.11, November 25th, 2019
+    Version 2.12, November 25th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -183,11 +183,13 @@
     2.11    Added MSTeams info from Test Gallery (1.0.18)
             Updated MSTeams info (1.0.3)
             Updated PowerApps-Admin-PowerShell info (2.0.24)
+    2.12    Fixed module processing bug
+            Fixed module upgrading when AcceptLicense is required
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v2.11.00'
+Write-Host 'Loading Connect-Office365Services v2.12'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -551,28 +553,35 @@ Function global:Update-Office365Modules {
     If( $local:IsAdmin) {
         ForEach ( $local:Function in $local:Functions) {
             $local:Item = ($local:Function).split('|')
-            If ( !($local:Item[3]) -or ( Get-Module -Name $local:Item[3] -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
-                $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
-                $local:Version = ($local:Module).Version[0]
-                Write-Host ('Checking {0}' -f $local:Item[4]) -ForegroundColor Green
-                $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction SilentlyContinue
-                $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
-                If ($OnlineModule -and $outdated) {
-                    Write-Host ('Updating {0} to {1}' -f $local:Item[4], [System.Version]$OnlineModule.version) -ForegroundColor White
-                    Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false
-                    # Uninstall all old versions of the module
-                    Write-Host ('Cleaning up older versions of {0}' -f $local:Item[4]) -ForegroundColor White
-                    Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { 
-                        Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White;
-                        Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force 
-                    }
+            If( $local:Item[3]) {
+                If( ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
                     $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                     $local:Version = ($local:Module).Version[0]
-                    If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
-                        Write-Host ('Module {0} updated to {1}' -f $local:Item[4], [System.Version]$local:Version) -ForegroundColor Green
-                    }
-                    Else {
-                        Write-Host ('Problem updating {0} to {1} (current {2})' -f $local:Item[4], [System.Version]$OnlineModule.version, $local:Version) -ForegroundColor Red
+                    Write-Host ('Checking {0}' -f $local:Item[4]) -ForegroundColor Green
+                    $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction SilentlyContinue
+                    $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
+                    If ($OnlineModule -and $outdated) {
+                        Write-Host ('Updating {0} to {1}' -f $local:Item[4], [System.Version]$OnlineModule.version) -ForegroundColor White
+                        If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
+                            Update-Module -Name $local:Item[3] -Force -Confirm:$false -AcceptLicense
+                        }
+                        Else {
+                            Update-Module -Name $local:Item[3] -Force -Confirm:$false
+                        }
+                        # Uninstall all old versions of the module
+                        Write-Host ('Cleaning up older versions of {0}' -f $local:Item[4]) -ForegroundColor White
+                        Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { 
+                            Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White;
+                            Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Confirm:$false -Force -ErrorAction Stop
+                        }
+                        $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
+                        $local:Version = ($local:Module).Version[0]
+                        If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
+                            Write-Host ('Module {0} updated to {1}' -f $local:Item[4], [System.Version]$local:Version) -ForegroundColor Green
+                        }
+                        Else {
+                            Write-Host ('Problem updating {0} to {1} (current {2})' -f $local:Item[4], [System.Version]$OnlineModule.version, $local:Version) -ForegroundColor Red
+                        }
                     }
                 }
             }
@@ -623,7 +632,7 @@ Else {
 $local:Functions= Get-Office365ModuleInfo
 ForEach ( $local:Function in $local:Functions) {
     $local:Item = ($local:Function).split('|')
-    If ( !($local:Item[3]) -or ( Get-Module -Name $local:Item[3] -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
+    If ( !($local:Item[3]) -or ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
         If ( $local:CreateISEMenu) {
             $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
             If ( !( $local:MenuObj)) {
@@ -648,10 +657,15 @@ ForEach ( $local:Function in $local:Functions) {
                 If ($OnlineModule -and $outdated -and $local:OnlineModuleAutoUpdate) {
                     if ( $local:IsAdmin) {
                         Write-Host ('.. Update to {0}' -f [System.Version]$OnlineModule.version) -ForegroundColor White -NoNewline
-                        Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false
+                        If( (Get-Command -name Update-Module).Parameters['AcceptLicense']) {
+                            Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false -AcceptLicense
+                        }
+                        Else {
+                            Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false 
+                        }
                         # Uninstall all old versions of the module
                         Write-Host '.. Cleanup' -ForegroundColor White -NoNewline
-                        Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -ErrorAction Stop -Confirm:$false -Force }
+                        Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Confirm:$false -Force -ErrorAction Stop }
 
                         $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                         $local:Version = ($local:Module).Version[0]
