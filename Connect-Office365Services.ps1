@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.12, November 25th, 2019
+    Version 2.13, November 26th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -184,12 +184,18 @@
             Updated MSTeams info (1.0.3)
             Updated PowerApps-Admin-PowerShell info (2.0.24)
     2.12    Fixed module processing bug
-            Fixed module upgrading when AcceptLicense is required
+            Added module upgrading with 'AcceptLicense' switch
+    2.13    Removed OnlineAutoUpdate option
+            Added notice to use Update-Office365Modules
+            Fixed updating of binary modules
+            Updated ExchangeOnlineManagement info (0.3374.9)
+            Splash header cosmetics
 #>
 
 #Requires -Version 3.0
 
-Write-Host 'Loading Connect-Office365Services v2.12'
+Write-Host '******************************************************************************'
+Write-Host 'Connect-Office365Services v2.13'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -199,6 +205,7 @@ Else {
 }
 
 $local:ExoPSSessionModuleVersion_Recommended = '16.0.3346.0'
+$local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
 
@@ -208,14 +215,18 @@ If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
 # Initialize global state variable when needed
 If( -not( Get-Variable myOffice365Services -ErrorAction SilentlyContinue )) { $global:myOffice365Services=@{} }
 
-# Online checks & Updating
+# Online checks 
 If( Get-Variable OnlineModuleVersionChecks -ErrorAction SilentlyContinue ) { $local:OnlineModuleVersionChecks = $OnlineModuleVersionChecks } else { $local:OnlineModuleVersionChecks= $false}
-If( Get-Variable OnlineModuleAutoUpdate -ErrorAction SilentlyContinue ) { $local:OnlineModuleAutoUpdate = $OnlineModuleAutoUpdate } else { $local:OnlineModuleAutoUpdate= $false }
 
 # Local Exchange session options
 $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
 
-Write-Host ('Online Checks: {0}, AutoUpdate: {1}, IsAdmin: {2}' -f $local:OnlineModuleVersionChecks, $local:OnlineModuleAutoUpdate, $local:IsAdmin)
+Write-Host ('Online Checks: {0}, IsAdmin: {1}, InternetAccess:{2}' -f $local:OnlineModuleVersionChecks, $local:IsAdmin, $local:HasInternetAccess)
+
+# Initialize environment
+Set-Office365Environment -AzureEnvironment 'Default'
+
+Write-Host '******************************************************************************'
 
 function global:Get-TenantIDfromMail {
     param(
@@ -252,7 +263,7 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.4',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.9',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
@@ -571,8 +582,8 @@ Function global:Update-Office365Modules {
                         # Uninstall all old versions of the module
                         Write-Host ('Cleaning up older versions of {0}' -f $local:Item[4]) -ForegroundColor White
                         Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { 
-                            Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White;
-                            Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Confirm:$false -Force -ErrorAction Stop
+                            Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White
+                            $_ | Uninstall-Module -Confirm:$false -Force
                         }
                         $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                         $local:Version = ($local:Module).Version[0]
@@ -603,9 +614,6 @@ function global:Connect-Office365 {
     Connect-SharePointOnline
 }
 
-# Initialize environment
-Set-Office365Environment -AzureEnvironment 'Default'
-
 #Scan for Exchange & SCC MFA PowerShell module presence
 $local:ExchangeMFAModule = 'Microsoft.Exchange.Management.ExoPowershellModule'
 $local:ExchangeADALModule = 'Microsoft.IdentityModel.Clients.ActiveDirectory'
@@ -630,6 +638,7 @@ Else {
 }
 
 $local:Functions= Get-Office365ModuleInfo
+$local:OutdatedModules= $false
 ForEach ( $local:Function in $local:Functions) {
     $local:Item = ($local:Function).split('|')
     If ( !($local:Item[3]) -or ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
@@ -650,50 +659,32 @@ ForEach ( $local:Function in $local:Functions) {
         If ( $local:Item[3]) {
             $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
             $local:Version = ($local:Module).Version[0]
-            Write-Host "Found $($local:Item[4]) module (v$($local:Version))" -ForegroundColor Green -NoNewline
+            Write-Host "Found $($local:Item[4]) (v$($local:Version)) module" -ForegroundColor Green -NoNewLine 
             If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
-                $OnlineModule = Find-Module -Name $local:Item[3] -Repository PSGallery -ErrorAction SilentlyContinue
+                $local:Repo= Get-PSRepository | Where {$_.SourceLocation -eq ($local:Module).RepositorySourceLocation}
+                If( [string]::IsNullOrEmpty( $local:Repo )) { 
+                    # Default Repo
+                    $local:Repo = 'PSGallery'
+                }
+                $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -ErrorAction SilentlyContinue
                 $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
-                If ($OnlineModule -and $outdated -and $local:OnlineModuleAutoUpdate) {
-                    if ( $local:IsAdmin) {
-                        Write-Host ('.. Update to {0}' -f [System.Version]$OnlineModule.version) -ForegroundColor White -NoNewline
-                        If( (Get-Command -name Update-Module).Parameters['AcceptLicense']) {
-                            Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false -AcceptLicense
-                        }
-                        Else {
-                            Update-Module -Name $local:Item[3] -ErrorAction SilentlyContinue -Force -Confirm:$false 
-                        }
-                        # Uninstall all old versions of the module
-                        Write-Host '.. Cleanup' -ForegroundColor White -NoNewline
-                        Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Confirm:$false -Force -ErrorAction Stop }
-
-                        $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
-                        $local:Version = ($local:Module).Version[0]
-                        If( [System.Version]$local:Version -eq [System.Version]$OnlineModule.version) {
-                            Write-Host (' UPDATED (v{0})' -f [System.Version]$local:Version) -ForegroundColor Green -NoNewline
-                        }
-                        Else {
-                            Write-Host ' ERROR' -ForegroundColor RED -NoNewline
-                        }
-                    }
-                    Else {
-                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red -NoNewline
-                    }
+                If ($OnlineModule -and $outdated) {
+                    $local:OutdatedModules= $true
+                    Write-Host ' OUTDATED' -ForegroundColor Yellow -NoNewLine
                 }
-                Else {
-                    If ( $outdated) {
-                        Write-Host (' OUTDATED (v{0} available)' -f [System.Version]$OnlineModule.version) -ForegroundColor Red -NoNewline
-                    }
-                }
-              }
+            }
             Else {
                 # No internet access 
             }
-            Write-Host '' # NewLine
+            Write-Host '' #NewLine
         }
     }
     Else {
         Write-Host "$($local:Item[4]) module not found ($($local:Item[5]))" -ForegroundColor Yellow
     }
+}
+
+If( $local:OutdatedModules) {
+    Write-Warning "Outdated modules found, run Update-Office365Modules to update supported modules." 
 }
 
