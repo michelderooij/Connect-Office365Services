@@ -666,6 +666,9 @@ ForEach ( $local:Function in $local:Functions) {
                     # Default Repo
                     $local:Repo = 'PSGallery'
                 }
+                Else {
+                    $local:Repo= ($local:Repo).Name
+                }
                 $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -ErrorAction SilentlyContinue
                 $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
                 If ($OnlineModule -and $outdated) {
