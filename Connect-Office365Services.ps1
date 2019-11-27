@@ -190,12 +190,13 @@
             Fixed updating of binary modules
             Updated ExchangeOnlineManagement info (0.3374.9)
             Splash header cosmetics
+    2.14    Fixed bug in Update-Office365Modules
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.13'
+Write-Host 'Connect-Office365Services v2.14'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -221,7 +222,7 @@ If( Get-Variable OnlineModuleVersionChecks -ErrorAction SilentlyContinue ) { $lo
 # Local Exchange session options
 $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
 
-Write-Host ('Online Checks: {0}, IsAdmin: {1}, InternetAccess:{2}' -f $local:OnlineModuleVersionChecks, $local:IsAdmin, $local:HasInternetAccess)
+Write-Host ('Online Checks:{0}, IsAdmin:{1}, InternetAccess:{2}' -f $local:OnlineModuleVersionChecks, $local:IsAdmin, $local:HasInternetAccess)
 
 function global:Get-TenantIDfromMail {
     param(
@@ -555,6 +556,7 @@ Function global:Get-Office365Tenant {
 
 Function global:Update-Office365Modules {
     $local:Functions= Get-Office365ModuleInfo
+    $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
     $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
     If( $local:IsAdmin) {
         ForEach ( $local:Function in $local:Functions) {
