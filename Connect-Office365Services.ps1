@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.13, November 26th, 2019
+    Version 2.15, December 16th, 2019
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -191,12 +191,13 @@
             Updated ExchangeOnlineManagement info (0.3374.9)
             Splash header cosmetics
     2.14    Fixed bug in Update-Office365Modules
+    2.15    Fixed module detection installed side-by-side
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.14'
+Write-Host 'Connect-Office365Services v2.15'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -637,7 +638,20 @@ $local:Functions= Get-Office365ModuleInfo
 $local:OutdatedModules= $false
 ForEach ( $local:Function in $local:Functions) {
     $local:Item = ($local:Function).split('|')
-    If ( !($local:Item[3]) -or ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
+    If( [string]::IsNullOrEmpty($local:Item[3])) {
+        $local:ModuleMatch= $true
+    }
+    Else {
+        If( [string]::IsNullOrEmpty($local:Item[7])) {
+            # Match module in any repo
+            $local:ModuleMatch= ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable)
+        }
+        Else {
+            # Match module from specific repo
+            $local:ModuleMatch= (Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation.Authority -eq $local:Item[7]
+        }
+    }
+    If( $local:ModuleMatch) {
         If ( $local:CreateISEMenu) {
             $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
             If ( !( $local:MenuObj)) {
