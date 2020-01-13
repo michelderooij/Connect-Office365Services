@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.15, December 16th, 2019
+    Version 2.20, January 13th, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -178,7 +178,7 @@
     2.10    Added Update-Office365Modules 
             Updated MSOnline info (1.1.183.57)
             Updated AzureAD v2 info (2.0.2.61)
-            Updated AzureAD Preview info (2.0.2.62)
+            Updated AzureAD v2 Preview info (2.0.2.62)
             Updated PowerApps-Admin-PowerShell info (2.0.21)
     2.11    Added MSTeams info from Test Gallery (1.0.18)
             Updated MSTeams info (1.0.3)
@@ -192,12 +192,18 @@
             Splash header cosmetics
     2.14    Fixed bug in Update-Office365Modules
     2.15    Fixed module detection installed side-by-side
+    2.20    Updated ExchangeOnlineManagement info (0.3374.10)
+            Updated Azure AD v2 info info (2.0.2.76)
+            Updated Azure AD v2 Preview info (2.0.2.77)
+            Updated SharePoiunt Online info (16.0.19515.12000)
+            Updated Update-Office365Modules detection logic
+            Updated Update-Office365Modules to skip non-repo installed modules
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.15'
+Write-Host 'Connect-Office365Services v2.20'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -260,15 +266,15 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.9',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.10',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
-        'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.61',
-        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.62',
+        'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.76',
+        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.77',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19404.12000',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19515.12000',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.3|www.powershellgallery.com'
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.18|www.poshtestgallery.com'
         'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.2.1810.0',
@@ -563,28 +569,48 @@ Function global:Update-Office365Modules {
         ForEach ( $local:Function in $local:Functions) {
             $local:Item = ($local:Function).split('|')
             If( $local:Item[3]) {
-                If( ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) -and ([string]::IsNullOrEmpty($local:Item[7]) -or ( ![string]::IsNullOrEmpty($local:Item[7]) -and ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable).RepositorySourceLocation).Authority -eq $local:Item[7]))) {
+                $local:CheckThisModule= $false
+                If([string]::IsNullOrEmpty($local:Item[7])) {
+                    If( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) {
+                        $local:CheckThisModule= $true
+                    }
+                }
+                Else {
+                    If( ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Select -First 1).RepositorySourceLocation).Authority -eq $local:Item[7]) {
+                        $local:CheckThisModule= $true
+                    }
+                }
+
+                If( $local:CheckThisModule) {
                     $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
-                    $local:Version = ($local:Module).Version[0]
-                    Write-Host ('Checking {0}' -f $local:Item[4]) 
-                    If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
-                        Update-Module -Name $local:Item[3] -Force -Confirm:$false -AcceptLicense
+                    If( ($local:Module).RepositorySourceLocation) {
+                        $local:Version = ($local:Module).Version[0]
+                        Write-Host ('Checking {0}' -f $local:Item[4]) 
+                        If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
+                            Update-Module -Name $local:Item[3] -Force -Confirm:$false -AcceptLicense
+                        }
+                        Else {
+                            Update-Module -Name $local:Item[3] -Force -Confirm:$false
+                        }
+
+                        # Uninstall all old versions of the module
+                        $local:OldModules= Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1
+                        If( $local:OldModules) {
+                            Write-Host ('Removing older version(s) of {0}' -f $local:Item[4])
+                            $local:OldModules | ForEach-Object { 
+                                Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White
+                                Uninstall-Module -Name $local:Item[3] -RequiredVersion $_.Version -Confirm:$false -Force 
+                            }
+                        }
+
+                        $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
+                        $local:NewVersion = ($local:Module).Version[0]
+                        If( [System.Version]$local:NewVersion -gt [System.Version]$local:Version) {
+                            Write-Host ('{0} updated to {1}' -f $local:Item[4], [System.Version]$local:NewVersion) -ForegroundColor Green
+                        }
                     }
                     Else {
-                        Update-Module -Name $local:Item[3] -Force -Confirm:$false
-                    }
-
-                    # Uninstall all old versions of the module
-                    Write-Host ('Removing older version(s) of {0}' -f $local:Item[4])
-                    Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1 | ForEach-Object { 
-                        Write-Host ('Uninstalling {0} version {1}' -f $_.Name, $_.Version) -ForegroundColor White
-                        Uninstall-Module -Name $local:Item[3] -RequiredVersion $_.Version -Confirm:$false -Force 
-                    }
-
-                    $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
-                    $local:NewVersion = ($local:Module).Version[0]
-                    If( [System.Version]$local:NewVersion -gt [System.Version]$local:Version) {
-                        Write-Host ('Module {0} updated to {1}' -f $local:Item[4], [System.Version]$local:NewVersion) -ForegroundColor Green
+                        Write-Host ('Skipping {0}: Not installed using Install-Module' -f $local:Item[4]) -ForegroundColor Yellow
                     }
                 }
             }
