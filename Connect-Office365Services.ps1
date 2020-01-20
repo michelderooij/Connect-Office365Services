@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.20, January 13th, 2020
+    Version 2.21, January 20th, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -198,12 +198,14 @@
             Updated SharePoiunt Online info (16.0.19515.12000)
             Updated Update-Office365Modules detection logic
             Updated Update-Office365Modules to skip non-repo installed modules
+    2.21    Updated ExchangeOnlineManagement info (0.3374.11)
+
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.20'
+Write-Host 'Connect-Office365Services v2.21'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -266,7 +268,7 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.10',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3374.11',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
