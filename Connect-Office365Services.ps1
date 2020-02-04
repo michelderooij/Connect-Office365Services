@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.22, January 29th, 2020
+    Version 2.23, February 4th, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -193,7 +193,7 @@
     2.14    Fixed bug in Update-Office365Modules
     2.15    Fixed module detection installed side-by-side
     2.20    Updated ExchangeOnlineManagement info (0.3374.10)
-            Updated Azure AD v2 info info (2.0.2.76)
+            Updated Azure AD v2 info (2.0.2.76)
             Updated Azure AD v2 Preview info (2.0.2.77)
             Updated SharePoiunt Online info (16.0.19515.12000)
             Updated Update-Office365Modules detection logic
@@ -203,12 +203,15 @@
             Updated SharePoint PnP Online info (3.17.2001.2)
     2.22    Updated ExchangeOnlineManagement info (0.3555.1)
             Updated MSTeams (Test) info (1.0.19)
+    2.23    Added PowerShell Graph module (0.1.1) 
+            Updated Exchange Online info (16.00.3527.000)
+            Updated SharePoint Online info (16.0.19724.12000)
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.22'
+Write-Host 'Connect-Office365Services v2.23'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -217,7 +220,7 @@ Else {
     Write-Host 'Running on x86 operating system: Not all modules available for x86 platform' -ForegroundColor Yellow
 }
 
-$local:ExoPSSessionModuleVersion_Recommended = '16.0.3346.0'
+$local:ExoPSSessionModuleVersion_Recommended = '16.0.3527.0'
 $local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
 $local:IsAdmin = $ThisPrincipal.IsInRole("Administrators")
@@ -279,13 +282,14 @@ function global:Get-Office365ModuleInfo {
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.77',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19515.12000',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19724.12000',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.3|www.powershellgallery.com'
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.19|www.poshtestgallery.com'
         'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.17.2001.2',
         'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.34',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
+        'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph|0.1.1',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
         'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
