@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.23, February 4th, 2020
+    Version 2.24, February 21st, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -206,6 +206,8 @@
     2.23    Added PowerShell Graph module (0.1.1) 
             Updated Exchange Online info (16.00.3527.000)
             Updated SharePoint Online info (16.0.19724.12000)
+    2.24    Updated ExchangeOnlineManagement info (0.3582.0)
+            Updated Microsoft Teams (Test) info (1.0.20)
 #>
 
 #Requires -Version 3.0
@@ -274,7 +276,7 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3555.1',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3582.0',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
@@ -284,7 +286,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
         'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19724.12000',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.3|www.powershellgallery.com'
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.19|www.poshtestgallery.com'
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.20|www.poshtestgallery.com'
         'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.17.2001.2',
         'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.34',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
