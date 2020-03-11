@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.24, February 21st, 2020
+    Version 2.25, March 11th, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -208,12 +208,22 @@
             Updated SharePoint Online info (16.0.19724.12000)
     2.24    Updated ExchangeOnlineManagement info (0.3582.0)
             Updated Microsoft Teams (Test) info (1.0.20)
+            Added Report-Office365Modules to report on known vs online versions
+    2.25    Updated Microsoft Teams info (1.0.5)
+            Updated Azure AD v2 Preview info (2.0.2.85)
+            Updated SharePoint Online info (16.0.19814.12000)
+            Updated MSTeams (Test) info (1.0.21)
+            Updated SharePointPnP Online (3.19.2003.0)
+            Updated PowerApps-Admin-PowerShell (2.0.45)
+            Updated PowerApps-PowerShell (1.0.9)
+            Updated Report-Office365Modules (cosmetic, repository checks)
+            Improved loading speed a bit (for repository checks)
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.23'
+Write-Host 'Connect-Office365Services v2.25'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -281,15 +291,15 @@ function global:Get-Office365ModuleInfo {
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
         'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.76',
-        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.77',
+        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.85',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19724.12000',
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.3|www.powershellgallery.com'
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.20|www.poshtestgallery.com'
-        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.17.2001.2',
-        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.34',
-        'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.8',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19814.12000',
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.5|www.powershellgallery.com'
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.21|www.poshtestgallery.com'
+        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.19.2003.0',
+        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.45',
+        'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.9',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph|0.1.1',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
@@ -632,6 +642,38 @@ Function global:Update-Office365Modules {
     }
 }
 
+Function global:Report-Office365Modules {
+    $local:Functions= Get-Office365ModuleInfo
+    $local:Repos= Get-PSRepository
+    ForEach ( $local:Function in $local:Functions) {
+        $local:Item = ($local:Function).split('|')
+        If( $local:Item[3]) {
+            $local:Repo= $local:Repos | Where {([System.Uri]($_.SourceLocation)).Authority -eq ([System.Uri]$local:Item[5]).Authority}
+            If( [string]::IsNullOrEmpty( $local:Repo )) { 
+                # Default Repo
+                $local:Repo = 'PSGallery'
+            }
+            Else {
+                $local:Repo= ($local:Repo).Name
+            }
+            Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Item[6]) -NoNewLine
+            $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -ErrorAction SilentlyContinue
+            If( $OnlineModule) {
+                Write-Host ('v{0}' -f [System.Version]$OnlineModule.version) -NoNewLine
+            }
+            Else {
+                Write-Host ('N/A') -NoNewLine
+            }
+            If( [System.Version]($local:Item[6]) -ieq [System.Version]$OnlineModule.version) {
+                Write-Host (' OK') -ForegroundColor Green
+            }
+            Else {
+                Write-Host (' *') -ForegroundColor Yellow
+            }
+        }
+    }
+}
+
 function global:Connect-Office365 {
     Connect-AzureActiveDirectory
     Connect-AzureRMS
@@ -673,20 +715,16 @@ Else {
 
 $local:Functions= Get-Office365ModuleInfo
 $local:OutdatedModules= $false
+$local:Repos= Get-PSRepository
 ForEach ( $local:Function in $local:Functions) {
     $local:Item = ($local:Function).split('|')
     If( [string]::IsNullOrEmpty($local:Item[3])) {
+        # Non-repo module
         $local:ModuleMatch= $true
     }
     Else {
-        If( [string]::IsNullOrEmpty($local:Item[7])) {
-            # Match module in any repo
-            $local:ModuleMatch= ( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable)
-        }
-        Else {
-            # Match module from specific repo
-            $local:ModuleMatch= (Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation.Authority -eq $local:Item[7]
-        }
+        # Match module from specific repo
+        $local:ModuleMatch= (Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation.Authority -eq ([System.Uri]$local:Item[5]).Authority
     }
     If( $local:ModuleMatch) {
         If ( $local:CreateISEMenu) {
@@ -704,11 +742,17 @@ ForEach ( $local:Function in $local:Functions) {
             Catch {Write-Warning -Message $_}
         }
         If ( $local:Item[3]) {
-            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
+            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending
+            If( $local:Item[5]) {
+                $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+            }
+            Else {
+                $local:Module= $local:Module | Select-Object -First 1
+            }
             $local:Version = ($local:Module).Version[0]
             Write-Host "Found $($local:Item[4]) (v$($local:Version)) module" -ForegroundColor Green -NoNewLine 
             If ( $local:HasInternetAccess -and $local:OnlineModuleVersionChecks) {
-                $local:Repo= Get-PSRepository | Where {$_.SourceLocation -eq ($local:Module).RepositorySourceLocation}
+                $local:Repo= $local:Repos | Where {$_.SourceLocation -eq ($local:Module).RepositorySourceLocation}
                 If( [string]::IsNullOrEmpty( $local:Repo )) { 
                     # Default Repo
                     $local:Repo = 'PSGallery'
