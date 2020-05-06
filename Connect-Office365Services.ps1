@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.25, March 11th, 2020
+    Version 2.27, May 6th, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -49,6 +49,7 @@
     - Get-Office365Tenant		Gets Office 365 tenant name
     - Set-Office365Environment		Configures Uri's and region to use
     - Update-Office365Modules           Updates supported Office 365 modules
+    - Report-Office365Modules           Report on known vs online module versions
 
     Functions to connect to other services provided by the module, e.g. Connect-MSGraph or Connect-MSTeams.
 
@@ -206,7 +207,7 @@
     2.23    Added PowerShell Graph module (0.1.1) 
             Updated Exchange Online info (16.00.3527.000)
             Updated SharePoint Online info (16.0.19724.12000)
-    2.24    Updated ExchangeOnlineManagement info (0.3582.0)
+    2.24    Updated ExchangeOnlineManagement v2 info (0.3582.0)
             Updated Microsoft Teams (Test) info (1.0.20)
             Added Report-Office365Modules to report on known vs online versions
     2.25    Updated Microsoft Teams info (1.0.5)
@@ -218,12 +219,20 @@
             Updated PowerApps-PowerShell (1.0.9)
             Updated Report-Office365Modules (cosmetic, repository checks)
             Improved loading speed a bit (for repository checks)
+    2.26    Added setting Window title to include current account
+    2.27    Updated ExchangeOnlineManagement to v0.4578.0
+            Updated Azure AD v2 Preview info (2.0.2.89)
+            Updated Azure Information Protection info (1.0.0.2)
+            Updated SharePoint Online info (16.0.20017.12000)
+            Updated MSTeams (Test) info (1.0.22)
+            Updated SharePointPnP Online info (3.20.2004.0)
+            Updated PowerApps-Admin-PowerShell info (2.0.60)
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.25'
+Write-Host 'Connect-Office365Services v2.27'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -250,6 +259,18 @@ If( Get-Variable OnlineModuleVersionChecks -ErrorAction SilentlyContinue ) { $lo
 $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
 
 Write-Host ('Online Checks:{0}, IsAdmin:{1}, InternetAccess:{2}' -f $local:OnlineModuleVersionChecks, $local:IsAdmin, $local:HasInternetAccess)
+
+function global:Set-WindowTitle {
+    If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
+        $local:PromptPrefix= ''
+        $ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
+        if( $ThisPrincipal.IsInRole("Administrators")) { 
+	    $local:PromptPrefix= 'Administrator:'
+        }
+        $local:Title= '{0}{1} connected to Tenant ID {2}' -f $local:PromptPrefix, $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
+        $host.ui.RawUI.WindowTitle = $local:Title
+    }
+}
 
 function global:Get-TenantIDfromMail {
     param(
@@ -278,7 +299,6 @@ function global:Get-TenantID {
     $global:myOffice365Services['TenantID']= Get-TenantIDfromMail $myOffice365Services['Office365Credentials'].UserName
     If( $global:myOffice365Services['TenantID']) {
         Write-Host ('TenantID: {0}' -f $global:myOffice365Services['TenantID'])
-        $host.ui.RawUI.WindowTitle = '{0} - {1}' -f $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
     }
 }
 
@@ -286,19 +306,19 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.3582.0',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.4578.0',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
         'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.76',
-        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.85',
-        'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.1',
+        'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.89',
+        'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.2',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.19814.12000',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.20017.12000',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.5|www.powershellgallery.com'
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.21|www.poshtestgallery.com'
-        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.19.2003.0',
-        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.45',
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.22|www.poshtestgallery.com'
+        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.20.2004.0',
+        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.60',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.9',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph|0.1.1',
@@ -572,6 +592,7 @@ Function global:Get-Office365Credentials {
         $global:myOffice365Services['Office365CredentialsMFA'] = $false
     }
     Get-TenantID
+    Set-WindowTitle
 }
 
 Function global:Get-OnPremisesCredentials {
