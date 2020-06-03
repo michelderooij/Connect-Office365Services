@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.28, May 20th, 2020
+    Version 2.29, June 3rd, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -227,9 +227,14 @@
             Updated MSTeams (Test) info (1.0.22)
             Updated SharePointPnP Online info (3.20.2004.0)
             Updated PowerApps-Admin-PowerShell info (2.0.60)
-    2.38    Updated Azure AD v2 Preview info (2.0.2.102)
+    2.28    Updated Azure AD v2 Preview info (2.0.2.102)
             Updated SharePointPnP Online info (3.21.2005.1)
             Updated PowerApps-Admin-PowerShell info (2.0.63)
+    2.29    Updated Exchange Online Management v2 (1.0.1)
+            Updated SharePoint Online (16.0.20122.12000)
+            Updated SharePointPnP Online (3.21.2005.2)
+            Updated PowerApps-Admin-PowerShell (2.0.64)
+            Updated PowerApps-PowerShell (1.0.13)
 #>
 
 #Requires -Version 3.0
@@ -309,7 +314,7 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|0.4578.0',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|1.0.1',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
@@ -317,12 +322,12 @@ function global:Get-Office365ModuleInfo {
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.102',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.2',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.20017.12000',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.20122.12000',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.5|www.powershellgallery.com'
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.22|www.poshtestgallery.com'
-        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.21.2005.1',
-        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.63',
-        'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.9',
+        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.21.2005.2',
+        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.64',
+        'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.13',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph|0.1.1',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
