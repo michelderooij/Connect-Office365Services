@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.29, June 3rd, 2020
+    Version 2.30, June 30th, 2020
 
     KNOWN LIMITATIONS:
     - When specifying PSSessionOptions for Modern Authentication, authentication fails (OAuth).
@@ -235,12 +235,21 @@
             Updated SharePointPnP Online (3.21.2005.2)
             Updated PowerApps-Admin-PowerShell (2.0.64)
             Updated PowerApps-PowerShell (1.0.13)
+    2.30    Updated Exchange Online Management Pre-release (2.0.3)
+            Updated Azure Active Directory (v2) (2.0.2.104)
+            Updated SharePoint Online updated to (16.0.20212.12000)
+            Updated Microsoft Teams (Test) (1.0.25)
+            Updated Microsoft Teams (2.0.7)
+            Updated SharePointPnP Online (3.22.2006.2)
+            Updated PowerApps-Admin-PowerShell (2.0.66)
+            Updated Microsoft.Graph (0.7.0)
+            Added pre-release modules support
 #>
 
 #Requires -Version 3.0
 
 Write-Host '******************************************************************************'
-Write-Host 'Connect-Office365Services v2.27'
+Write-Host 'Connect-Office365Services v2.30'
 
 If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
     Write-Host 'Running on x64 operating system'
@@ -314,22 +323,22 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | LastKnownVersion | Repository Source (authority)
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|1.0.1',
+        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement|2.0.3',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline|1.1.183.57',
-        'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.76',
+        'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread|2.0.2.104',
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview|2.0.2.102',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService|1.0.0.2',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366|7.0.1994.0',
-        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.20122.12000',
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.5|www.powershellgallery.com'
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.22|www.poshtestgallery.com'
-        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.21.2005.2',
-        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.64',
+        'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell|16.0.20212.12000',
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|1.0.7|www.powershellgallery.com'
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|1.0.25|www.poshtestgallery.com'
+        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline|3.22.2006.2',
+        'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell|2.0.66',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell/|1.0.13',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune/|6.1907.1.0',
-        'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph|0.1.1',
+        'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph|0.7.0',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
         'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
@@ -575,7 +584,6 @@ function global:Connect-PowerApps {
     }
 }
 
-
 Function global:Get-Office365Credentials {
     $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
     $local:MFAenabledModulePresence= $false
@@ -589,7 +597,7 @@ Function global:Get-Office365Credentials {
 	ForEach( $MFAMod in $MFAMods) {
             $local:Item = ($local:MFAMod).split('|')
             If( (Get-Module -Name $local:Item[0] -ListAvailable)) {
-                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge [System.Version]$local:Item[1] )
+                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge [System.Version]($local:Item[1] -replace '[^\d\.]','') )
             }
         }
     }
@@ -603,6 +611,20 @@ Function global:Get-Office365Credentials {
     Set-WindowTitle
 }
 
+Function global:Get-AllowPrereleaseModule {
+    If( $global:myOffice365Services['AllowPrerelease']) {
+        # Already asked
+    }
+    Else {
+        $Answer = Read-host  -Prompt 'Would you like to check for pre-release modules? (y/N) '
+        Switch ($Answer.ToUpper()) {
+            'Y' { $rval = $true }
+            Default { $rval = $false}
+        }
+        $global:myOffice365Services['AllowPrerelease']= $rval
+    }
+}
+
 Function global:Get-OnPremisesCredentials {
     $global:myOffice365Services['OnPremisesCredentials'] = $host.ui.PromptForCredential('On-Premises Credentials', 'Please Enter Your On-Premises Credentials', '', '')
 }
@@ -612,6 +634,7 @@ Function global:Get-Office365Tenant {
 }
 
 Function global:Update-Office365Modules {
+    Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
     $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
     $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
@@ -637,10 +660,10 @@ Function global:Update-Office365Modules {
                         $local:Version = ($local:Module).Version[0]
                         Write-Host ('Checking {0}' -f $local:Item[4]) 
                         If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
-                            Update-Module -Name $local:Item[3] -Force -Confirm:$false -AcceptLicense
+                            Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false -AcceptLicense
                         }
                         Else {
-                            Update-Module -Name $local:Item[3] -Force -Confirm:$false
+                            Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false
                         }
 
                         # Uninstall all old versions of the module
@@ -655,8 +678,8 @@ Function global:Update-Office365Modules {
 
                         $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                         $local:NewVersion = ($local:Module).Version[0]
-                        If( [System.Version]$local:NewVersion -gt [System.Version]$local:Version) {
-                            Write-Host ('{0} updated to {1}' -f $local:Item[4], [System.Version]$local:NewVersion) -ForegroundColor Green
+                        If( [System.Version]($local:NewVersion -replace '[^\d\.]','') -gt [System.Version]($local:Version -replace '[^\d\.]','')) {
+                            Write-Host ('{0} updated to {1}' -f $local:Item[4], [System.Version]($local:NewVersion -replace '[^\d\.]','')) -ForegroundColor Green
                         }
                     }
                     Else {
@@ -672,6 +695,7 @@ Function global:Update-Office365Modules {
 }
 
 Function global:Report-Office365Modules {
+    Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
     ForEach ( $local:Function in $local:Functions) {
@@ -686,14 +710,14 @@ Function global:Report-Office365Modules {
                 $local:Repo= ($local:Repo).Name
             }
             Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Item[6]) -NoNewLine
-            $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -ErrorAction SilentlyContinue
+            $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
             If( $OnlineModule) {
-                Write-Host ('v{0}' -f [System.Version]$OnlineModule.version) -NoNewLine
+                Write-Host ('v{0}' -f [System.Version]($OnlineModule.version -replace '[^\d\.]','')) -NoNewLine
             }
             Else {
                 Write-Host ('N/A') -NoNewLine
             }
-            If( [System.Version]($local:Item[6]) -ieq [System.Version]$OnlineModule.version) {
+            If( [System.Version]($local:Item[6] -replace '[^\d\.]','') -ieq [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
                 Write-Host (' OK') -ForegroundColor Green
             }
             Else {
@@ -727,7 +751,7 @@ If ( $local:ModuleList) {
     $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeMFAModule).dll"
     $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
     Write-Host "Exchange Modern Authentication PowerShell Module installed (version $($local:ModuleVersion))" -ForegroundColor Green
-    if ( [System.Version]$local:ModuleVersion -lt [System.Version]$local:ExoPSSessionModuleVersion_Recommended) {
+    if ( [System.Version]($local:ModuleVersion -replace '[^\d\.]','') -lt [System.Version]($local:ExoPSSessionModuleVersion_Recommended -replace '[^\d\.]','')) {
         Write-Host ('It is highly recommended to update the ExoPSSession module to version {0} or higher' -f $local:ExoPSSessionModuleVersion_Recommended) -ForegroundColor Red
     }
     Import-Module -FullyQualifiedName $local:ModuleName -Force
@@ -790,7 +814,7 @@ ForEach ( $local:Function in $local:Functions) {
                     $local:Repo= ($local:Repo).Name
                 }
                 $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -ErrorAction SilentlyContinue
-                $outdated = [System.Version]$local:Version -lt [System.Version]$OnlineModule.version
+                $outdated = [System.Version]($local:Version -replace '[^\d\.]','') -lt [System.Version]($OnlineModule.version -replace '[^\d\.]','')
                 If ($OnlineModule -and $outdated) {
                     $local:OutdatedModules= $true
                     Write-Host ' OUTDATED' -ForegroundColor Yellow -NoNewLine
