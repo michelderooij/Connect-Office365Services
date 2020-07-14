@@ -428,7 +428,7 @@ function global:Connect-ExchangeOnlinev2 {
     }
     Else {
         Write-Host "Connecting to Exchange Online (v2) using $($global:myOffice365Services['Office365Credentials'].username) .."
-        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUrl $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -SessionOption $global:myOffice365Services['SessionExchangeOptions']
+        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUrl $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     If ( $global:myOffice365Services['Session365'] ) {
         Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
