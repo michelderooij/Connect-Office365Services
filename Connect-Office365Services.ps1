@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.41, August 8th, 2020
+    Version 2.42, August 20th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -259,10 +259,12 @@
             Only online version checks are performed (removes 'offline' version data)
             Some visual cosmetics and simplifications
     2.41    Made Elevated check language-independent
+    2.42    Fixed bugs in reporting on and updating modules 
+            Cosmetics when reporting
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.41'
+$local:ScriptVersion= '2.42'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -307,7 +309,7 @@ function global:Get-TenantID {
 }
 
 function global:Get-Office365ModuleInfo {
-    # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | Link | Repository
+    # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | (Repo)Link 
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline||Exchange Online (v1)|',
         'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
@@ -319,9 +321,9 @@ function global:Get-Office365ModuleInfo {
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService',
         'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366',
         'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell',
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams|www.powershellgallery.com',
-        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams|www.poshtestgallery.com',
-        'Connect|Microsoft.Graph.Teams|Connect-Graph|Microsoft.Graph.Teams.Team|Microsoft.Graph.Teams.Team|https://www.powershellgallery.com/packages/Microsoft.Graph.Teams.Team|www.powershellgallery.com',
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams',
+        'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams',
+        'Connect|Microsoft.Graph.Teams|Connect-Graph|Microsoft.Graph.Teams.Team|Microsoft.Graph.Teams.Team|https://www.powershellgallery.com/packages/Microsoft.Graph.Teams.Team',
         'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline',
         'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell',
@@ -635,28 +637,20 @@ Function global:Get-Office365Tenant {
 Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
-    $local:ThisPrincipal = new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
-    $local:IsAdmin= $ThisPrincipal.IsInRole("Administrators")
+    $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     If( $local:IsAdmin) {
         ForEach ( $local:Function in $local:Functions) {
             $local:Item = ($local:Function).split('|')
             If( $local:Item[3]) {
                 $local:CheckThisModule= $false
-                If([string]::IsNullOrEmpty($local:Item[6])) {
-                    If( Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable) {
-                        $local:CheckThisModule= $true
-                    }
-                }
-                Else {
-                    If( ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Select -First 1).RepositorySourceLocation).Authority -eq $local:Item[6]) {
-                        $local:CheckThisModule= $true
-                    }
+                If( ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Select -First 1).RepositorySourceLocation).Authority -eq (([System.Uri]$local:Item[5])).Authority) {
+                    $local:CheckThisModule= $true
                 }
 
                 If( $local:CheckThisModule) {
                     $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
                     If( ($local:Module).RepositorySourceLocation) {
-                        $local:Version = ($local:Module).Version[0]
+                        $local:Version = ($local:Module).Version
                         Write-Host ('Checking {0}' -f $local:Item[4]) 
                         If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
                             Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false -AcceptLicense
@@ -701,12 +695,13 @@ Function global:Report-Office365Modules {
     $local:Repos= Get-PSRepository
 
     ForEach ( $local:Function in $local:Functions) {
+
         $local:Item = ($local:Function).split('|')
         If( $local:Item[3]) {
 
             # Use specific or default repository
             If( $local:Item[5]) {
-                $local:Repo= $local:Repos | Where-Object {([System.Uri]($_.SourceLocation)).Authority -eq ([System.Uri]$local:Item[5]).Authority}
+                $local:Repo= $local:Repos | Where-Object {([System.Uri]($_.SourceLocation)).Authority -eq (([System.Uri]$local:Item[5])).Authority}
             }
             If( [string]::IsNullOrEmpty( $local:Repo )) { 
                 $local:Repo = 'PSGallery'
@@ -715,9 +710,9 @@ Function global:Report-Office365Modules {
                 $local:Repo= ($local:Repo).Name
             }
 
-            $local:Module= (Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation.Authority -eq ([System.Uri]$local:Item[5]).Authority | Select-Object -First 1
+            $local:Module= Get-Module -Name $local:Item[3] -ListAvailable | Where {[System.Uri]($_.RepositorySourceLocation).Authority -eq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
             If( $local:Module) {
-                $local:Version = ($local:Module).Version[0]
+                $local:Version = ($local:Module).Version
 
                 Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Version) -NoNewLine
                 $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
@@ -727,11 +722,16 @@ Function global:Report-Office365Modules {
                 Else {
                     Write-Host ('N/A') -NoNewLine
                 }
-                If( [System.Version]($local:Version -replace '[^\d\.]','') -ieq [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
-                    Write-Host (' OK') -ForegroundColor Green
+                If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
+                    Write-Host (' Unknown') -ForegroundColor Yellow
                 }
                 Else {
-                    Write-Host (' *') -ForegroundColor Yellow
+                    If( [System.Version]($local:Version -replace '[^\d\.]','') -ieq [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
+                        Write-Host (' OK') -ForegroundColor Green
+                    }
+                    Else {
+                        Write-Host (' Outdated') -ForegroundColor RED
+                    }
                 }
             }
         }
@@ -749,16 +749,16 @@ Function global:Report-Office365Modules {
                     If ( $local:ModuleList) {
                         $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeMFAModule).dll"
                         $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
-                        Write-Host ('Module: ExoPowershellModule - Checked v{0}, Online: ' -f $local:Item[6]) -NoNewLine
+                        Write-Host ('Module: ExoPowershellModule - Checked v{0}, Online: ' -f $local:ModuleVersion) -NoNewLine
 
                         $OnlineModuleVersion= Get-ExchangeOnlineClickOnceVersion
                         Write-Host ('v{0}' -f [System.Version]($OnlineModuleVersion)) -NoNewLine
 
-                        If( [System.Version]($local:Item[6] -replace '[^\d\.]','') -ieq [System.Version]($OnlineModuleVersion -replace '[^\d\.]','')) {
+                        If( [System.Version]($local:ModuleVersion -replace '[^\d\.]','') -ieq [System.Version]($OnlineModuleVersion -replace '[^\d\.]','')) {
                             Write-Host (' OK') -ForegroundColor Green
                         }
                         Else {
-                            Write-Host (' *') -ForegroundColor Yellow
+                            Write-Host (' Outdated') -ForegroundColor RED
                         }
                     }
                 }
