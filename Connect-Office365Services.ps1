@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.42, August 20th, 2020
+    Version 2.43, August 28th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -261,10 +261,11 @@
     2.41    Made Elevated check language-independent
     2.42    Fixed bugs in reporting on and updating modules 
             Cosmetics when reporting
+    2.43    Added support for MSCommerce
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.42'
+$local:ScriptVersion= '2.43'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -323,6 +324,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams',
+        'Connect|Microsoft Commerce|Connect-MSCommerce|MSCommerce|Microsoft Commerce|https://www.powershellgallery.com/packages/MSCommerce',
         'Connect|Microsoft.Graph.Teams|Connect-Graph|Microsoft.Graph.Teams.Team|Microsoft.Graph.Teams.Team|https://www.powershellgallery.com/packages/Microsoft.Graph.Teams.Team',
         'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline',
         'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell',
