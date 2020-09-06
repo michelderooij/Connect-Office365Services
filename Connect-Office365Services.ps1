@@ -265,6 +265,7 @@
     2.44    Fixed unneeded update of module in Update-Office365Modules
             Slightly speed up updating and reporting routine
     2.45    Improved loading speed by collecting Module information once
+            Added AllowPrerelease to uninstall-module operation
 #>
 
 #Requires -Version 3.0
@@ -704,7 +705,7 @@ Function global:Update-Office365Modules {
                                 If( $local:OldModules) {
                                     ForEach( $Module in $local:OldModules) {
                                         Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $Module.Version) -ForegroundColor White
-                                        $Module | Uninstall-Module -Confirm:$false -Force 
+                                        $Module | Uninstall-Module -Confirm:$false -Force -AllowPrerelease:$global:myOffice365Services['AllowPrerelease']
                                     }
                                 }
 
