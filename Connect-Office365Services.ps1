@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.44, September 6th, 2020
+    Version 2.45, September 6th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -264,10 +264,11 @@
     2.43    Added support for MSCommerce
     2.44    Fixed unneeded update of module in Update-Office365Modules
             Slightly speed up updating and reporting routine
+    2.45    Improved loading speed by collecting Module information once
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.44'
+$local:ScriptVersion= '2.45'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -856,10 +857,12 @@ Set-Office365Environment -AzureEnvironment 'Default'
 Write-Host ('Environment:{0}, IsAdmin:{1}, InternetAccess:{2}, Platform:{3}' -f $global:myOffice365Services['AzureEnvironment'], $local:IsAdmin, $local:HasInternetAccess, $local:Platform)
 Write-Host ('*' * 78)
 
-$local:OutdatedModules= $false
-
 $local:Functions= Get-Office365ModuleInfo
 $local:Repos= Get-PSRepository
+
+Write-Host ('Collecting Module information ..')
+$local:AvailableModules= Get-Module -ListAvailable
+
 ForEach ( $local:Function in $local:Functions) {
 
     $local:Item = ($local:Function).split('|')
@@ -899,7 +902,7 @@ ForEach ( $local:Function in $local:Functions) {
     }
     Else {
         # Match module from specific repo
-        $local:ModuleMatch= (Get-Module -Name $local:Item[3] -ListAvailable).RepositorySourceLocation.Authority -eq ([System.Uri]$local:Item[5]).Authority
+        $local:ModuleMatch= ($local:AvailableModules | Where {$_.Name -ieq $local:Item[3] }).RepositorySourceLocation.Authority -eq ([System.Uri]$local:Item[5]).Authority
     }
 
     If( $local:ModuleMatch) {
@@ -919,7 +922,7 @@ ForEach ( $local:Function in $local:Functions) {
             }
         }
         If ( $local:Item[3]) {
-            $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending
+            $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending
             If( $local:Item[5]) {
                 $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
             }
