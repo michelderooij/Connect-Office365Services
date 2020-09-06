@@ -670,7 +670,7 @@ Function global:Update-Office365Modules {
                         }
                         $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
                         If( $OnlineModule) {
-                            If( [System.Version]($local:Version -replace '[^\d\.]','') -ilt [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
+                            If( [System.Version]($local:Version -replace '[^\d\.]','') -lt [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
                                 $local:NewerAvailable= $true
                             }
                             Else {
@@ -682,19 +682,19 @@ Function global:Update-Office365Modules {
                         }
 
                         If( $local:NewerAvailable) {
-                            # Pass AcceptLicense if current version of UpdateModule supports it
+                            $local:UpdateSuccess= $false
                             Try {
+                                # Pass AcceptLicense if current version of UpdateModule supports it
                                 If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
                                     Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false -AcceptLicense
                                 }
                                 Else {
                                     Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false
                                 }
-                                $UpdateSuccess= $true
+                                $local:UpdateSuccess= $true
                             }
                             Catch {
                                 Write-Error ('Problem updating module {0}:{1}' -f $local:Item[3], $Error[0].Message)
-                                $UpdateSuccess= $false
                             }
 
                             If( $local:UpdateSuccess) {
