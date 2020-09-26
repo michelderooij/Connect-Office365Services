@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.45, September 6th, 2020
+    Version 2.5, September 26th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -266,10 +266,13 @@
             Slightly speed up updating and reporting routine
     2.45    Improved loading speed by collecting Module information once
             Added AllowPrerelease to uninstall-module operation
+    2.5     Switched to using PowerShellGet 2.x cmdlets (Get-InstalledModule) for performance
+            Added mention of PowerShell, PowerShellGet and PackageManagement version in header
+            Removed InternetAccess mention in header
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.45'
+$local:ScriptVersion= '2.5'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -643,7 +646,7 @@ Function global:Get-Office365Tenant {
 Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
-    $local:AvailableModules= Get-Module -ListAvailable
+    $local:AvailableModules= Get-InstalledModule 
     $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     If( $local:IsAdmin) {
         ForEach ( $local:Function in $local:Functions) {
@@ -655,8 +658,17 @@ Function global:Update-Office365Modules {
                 }
 
                 If( $local:CheckThisModule) {
+
                     $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending | Select-Object -First 1
+                    If( $local:Item[5]) {
+                       $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+                    }
+                    Else {
+                        $local:Module= $local:Module | Select-Object -First 1
+                    }
+
                     If( ($local:Module).RepositorySourceLocation) {
+
                         $local:Version = ($local:Module).Version
                         Write-Host ('Checking {0}' -f $local:Item[4]) 
 
@@ -700,19 +712,18 @@ Function global:Update-Office365Modules {
                             }
 
                             If( $local:UpdateSuccess) {
-                                # Uninstall all old versions of the module
-                                $local:OldModules= Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -Skip 1
-                                If( $local:OldModules) {
-                                    ForEach( $Module in $local:OldModules) {
-                                        Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $Module.Version) -ForegroundColor White
-                                        $Module | Uninstall-Module -Confirm:$false -Force -AllowPrerelease:$global:myOffice365Services['AllowPrerelease']
-                                    }
-                                }
 
-                                $local:Module = Get-Module -Name $local:Item[3] -ListAvailable | Sort-Object -Property Version -Descending | Select-Object -First 1
-                                $local:NewVersion = ($local:Module).Version[0]
-                                If( [System.Version]($local:NewVersion -replace '[^\d\.]','') -gt [System.Version]($local:Version -replace '[^\d\.]','')) {
-                                    Write-Host ('Installed {0} version {1}' -f $local:Item[4], [System.Version]($local:NewVersion -replace '[^\d\.]','')) -ForegroundColor Green
+                                $local:Module = Get-InstalledModule -Name $local:Item[3]
+                                $local:LatestVersion = ($local:Module).Version
+                                Write-Host ('Installed {0} version {1}' -f $local:Item[4], $local:LatestVersion ) -ForegroundColor Green
+
+                                # Uninstall all old versions of the module
+                                $local:OldModules= Get-InstalledModule -Name $local:Item[3] -AllVersions | Where {$_.Version -ne $local:LatestVersion}
+                                If( $local:OldModules) {
+                                    ForEach( $OldModule in $local:OldModules) {
+                                        Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
+                                        $OldModule | Uninstall-Module -Confirm:$false -Force -AllowPrerelease:$global:myOffice365Services['AllowPrerelease']
+                                    }
                                 }
                             }
                             Else {
@@ -742,7 +753,7 @@ Function global:Report-Office365Modules {
 
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
-    $local:AvailableModules= Get-Module -ListAvailable
+    $local:AvailableModules= Get-InstalledModule 
 
     ForEach ( $local:Function in $local:Functions) {
 
@@ -760,8 +771,17 @@ Function global:Report-Office365Modules {
                 $local:Repo= ($local:Repo).Name
             }
 
-            $local:Module= $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Where {[System.Uri]($_.RepositorySourceLocation).Authority -eq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+            $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending
+            If( $local:Item[5]) {
+                $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+            }
+            Else {
+                $local:Module= $local:Module | Select-Object -First 1
+            }
+
             If( $local:Module) {
+
+
                 $local:Version = ($local:Module).Version
 
                 Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Version) -NoNewLine
@@ -828,17 +848,23 @@ function global:Connect-Office365 {
     Connect-SharePointOnline
 }
 
+If(!( Get-Command Get-InstalledModule -ErrorAction SilentlyContinue)) {
+    Write-Warning ('Get-InstalledModule not available, please install PowerShellGet first')
+    Write-Warning ('See https://docs.microsoft.com/en-us/powershell/scripting/gallery/installing-psget')
+    Exit -1
+}
+
+$PSGetModule= Get-Module PowerShellGet
+If(! $PSGetModule) {
+    Write-Warning ('PowerShellGet Module not found')
+}
+$PackageManagementModule= Get-Module PackageManagement 
+If(! $PackageManagementModule) {
+    Write-Warning ('PackageManagement Module not found')
+}
+
 Write-Host ('*' * 78)
 Write-Host ('Connect-Office365Services v{0}' -f $local:ScriptVersion)
-
-If( $ENV:PROCESSOR_ARCHITECTURE -eq 'AMD64') {
-    $local:Platform= 'x64'
-}
-Else {
-    $local:Platform= 'x86 (impacts module availalability)'
-}
-
-$local:HasInternetAccess = ([Activator]::CreateInstance([Type]::GetTypeFromCLSID([Guid]'{DCB00C01-570F-4A9B-8D69-199FDBA5723B}')).IsConnectedToInternet)
 
 # See if the Administator built-in role is part of your role
 $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -855,14 +881,15 @@ $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption
 # Initialize environment & endpoints
 Set-Office365Environment -AzureEnvironment 'Default'
 
-Write-Host ('Environment:{0}, IsAdmin:{1}, InternetAccess:{2}, Platform:{3}' -f $global:myOffice365Services['AzureEnvironment'], $local:IsAdmin, $local:HasInternetAccess, $local:Platform)
+Write-Host ('Environment:{0}, Administrator:{1}' -f $global:myOffice365Services['AzureEnvironment'], $local:IsAdmin)
+Write-Host ('Architecture:{0}, PS:{1}, PSGet:{2}, PackageManagement:{3}' -f ($ENV:PROCESSOR_ARCHITECTURE), ($PSVersionTable).PSVersion, $PSGetModule.Version, $PackageManagementModule.Version )
 Write-Host ('*' * 78)
 
 $local:Functions= Get-Office365ModuleInfo
 $local:Repos= Get-PSRepository
 
 Write-Host ('Collecting Module information ..')
-$local:AvailableModules= Get-Module -ListAvailable
+$local:AvailableModules= Get-InstalledModule
 
 ForEach ( $local:Function in $local:Functions) {
 
@@ -903,7 +930,7 @@ ForEach ( $local:Function in $local:Functions) {
     }
     Else {
         # Match module from specific repo
-        $local:ModuleMatch= ($local:AvailableModules | Where {$_.Name -ieq $local:Item[3] }).RepositorySourceLocation.Authority -eq ([System.Uri]$local:Item[5]).Authority
+        $local:ModuleMatch= ([System.Uri]($local:AvailableModules | Where {$_.Name -ieq $local:Item[3] }).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
     }
 
     If( $local:ModuleMatch) {
@@ -930,7 +957,7 @@ ForEach ( $local:Function in $local:Functions) {
             Else {
                 $local:Module= $local:Module | Select-Object -First 1
             }
-            $local:Version = ($local:Module).Version[0]
+            $local:Version = ($local:Module).Version
             Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
         }
     }
