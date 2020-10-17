@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.5, September 26th, 2020
+    Version 2.51, October 17th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -269,10 +269,11 @@
     2.5     Switched to using PowerShellGet 2.x cmdlets (Get-InstalledModule) for performance
             Added mention of PowerShell, PowerShellGet and PackageManagement version in header
             Removed InternetAccess mention in header
+    2.51    Added ConvertTo-SystemVersion helper function to deal with N.N-PreviewN
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.5'
+$local:ScriptVersion= '2.51'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -607,7 +608,7 @@ Function global:Get-Office365Credentials {
 	ForEach( $MFAMod in $MFAMods) {
             $local:Item = ($local:MFAMod).split('|')
             If( (Get-Module -Name $local:Item[0] -ListAvailable)) {
-                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge [System.Version]($local:Item[1] -replace '[^\d\.]','') )
+                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge (ConvertTo-SystemVersion -Text $local:Item[1] ) )
             }
         }
     }
@@ -747,6 +748,19 @@ Function global:Update-Office365Modules {
     }
 }
 
+Function global:ConvertTo-SystemVersion {
+    param(
+        [string]$Text
+    )
+    If( [string]::IsNullOrEmpty( $Text)) {
+        [System.Version]'0.0'
+    }
+    Else {
+        $local:StrippedPreview= $Text -replace 'Preview[\d]*', ''
+        [System.Version]($local:StrippedPreview -replace '[^\d\.]','')
+    }
+}
+
 Function global:Report-Office365Modules {
 
     Get-AllowPrereleaseModule
@@ -787,7 +801,7 @@ Function global:Report-Office365Modules {
                 Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Version) -NoNewLine
                 $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
                 If( $OnlineModule) {
-                    Write-Host ('v{0}' -f [System.Version]($OnlineModule.version -replace '[^\d\.]','')) -NoNewLine
+                    Write-Host ('v{0}' -f (ConvertTo-SystemVersion -Text $OnlineModule.version)) -NoNewLine
                 }
                 Else {
                     Write-Host ('N/A') -NoNewLine
@@ -796,7 +810,7 @@ Function global:Report-Office365Modules {
                     Write-Host (' Unknown') -ForegroundColor Yellow
                 }
                 Else {
-                    If( [System.Version]($local:Version -replace '[^\d\.]','') -ige [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
+                    If( (ConvertTo-SystemVersion -Text $local:Version) -ige (ConvertTo-SystemVersion -Text $OnlineModule.version)) {
                         Write-Host (' OK') -ForegroundColor Green
                     }
                     Else {
@@ -824,7 +838,7 @@ Function global:Report-Office365Modules {
                         $OnlineModuleVersion= Get-ExchangeOnlineClickOnceVersion
                         Write-Host ('v{0}' -f [System.Version]($OnlineModuleVersion)) -NoNewLine
 
-                        If( [System.Version]($local:ModuleVersion -replace '[^\d\.]','') -ieq [System.Version]($OnlineModuleVersion -replace '[^\d\.]','')) {
+                        If( (ConvertTo-SystemVersion -Text $local:ModuleVersion) -ieq (ConvertTo-SystemVersion -Text $OnlineModuleVersion)) {
                             Write-Host (' OK') -ForegroundColor Green
                         }
                         Else {
