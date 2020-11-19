@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.51, October 17th, 2020
+    Version 2.53, November 19th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -270,10 +270,12 @@
             Added mention of PowerShell, PowerShellGet and PackageManagement version in header
             Removed InternetAccess mention in header
     2.51    Added ConvertTo-SystemVersion helper function to deal with N.N-PreviewN
+    2.52    Added NoClobber and AcceptLicense to update
+    2.53    Fixed reporting of installed verion during update
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.51'
+$local:ScriptVersion= '2.53'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -714,12 +716,13 @@ Function global:Update-Office365Modules {
 
                             If( $local:UpdateSuccess) {
 
-                                $local:Module = Get-InstalledModule -Name $local:Item[3]
+                                $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
+                                $local:Module = $local:ModuleVersions | Sort-Object -Property Version -Descending | Select -First 1
                                 $local:LatestVersion = ($local:Module).Version
                                 Write-Host ('Installed {0} version {1}' -f $local:Item[4], $local:LatestVersion ) -ForegroundColor Green
 
                                 # Uninstall all old versions of the module
-                                $local:OldModules= Get-InstalledModule -Name $local:Item[3] -AllVersions | Where {$_.Version -ne $local:LatestVersion}
+                                $local:OldModules= $local:ModuleVersions | Where {$_.Version -ne $local:LatestVersion}
                                 If( $local:OldModules) {
                                     ForEach( $OldModule in $local:OldModules) {
                                         Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
