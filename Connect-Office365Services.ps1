@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.53, November 19th, 2020
+    Version 2.54, November 26th, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -272,10 +272,11 @@
     2.51    Added ConvertTo-SystemVersion helper function to deal with N.N-PreviewN
     2.52    Added NoClobber and AcceptLicense to update
     2.53    Fixed reporting of installed verion during update
+    2.54    Improved module updating
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.53'
+$local:ScriptVersion= '2.54'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -717,7 +718,7 @@ Function global:Update-Office365Modules {
                             If( $local:UpdateSuccess) {
 
                                 $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
-                                $local:Module = $local:ModuleVersions | Sort-Object -Property Version -Descending | Select -First 1
+                                $local:Module = $local:ModuleVersions | Sort-Object -Property PublishedDate -Descending | Select -First 1
                                 $local:LatestVersion = ($local:Module).Version
                                 Write-Host ('Installed {0} version {1}' -f $local:Item[4], $local:LatestVersion ) -ForegroundColor Green
 
@@ -726,7 +727,12 @@ Function global:Update-Office365Modules {
                                 If( $local:OldModules) {
                                     ForEach( $OldModule in $local:OldModules) {
                                         Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
-                                        $OldModule | Uninstall-Module -Confirm:$false -Force -AllowPrerelease:$global:myOffice365Services['AllowPrerelease']
+                                        Try {
+                                            Uninstall-Module -Name $OldModule.Name -RequiredVersion $OldModule.Version -Confirm:$false -Force
+                                        }
+                                        Catch {
+                                            Write-Error ('Problem uninstalling module {0} version {1}: {2}' -f $OldModule.Name, $OldModule.Version, $Error[0].Message) 
+                                        }
                                     }
                                 }
                             }
