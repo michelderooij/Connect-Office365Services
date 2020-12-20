@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.54, November 26th, 2020
+    Version 2.55, December 20th 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -273,10 +273,13 @@
     2.52    Added NoClobber and AcceptLicense to update
     2.53    Fixed reporting of installed verion during update
     2.54    Improved module updating
+    2.55    Fixed updating updating module when it's loaded
+            Fixed removal of old modules logic (.100 is newer than .81)
+            Set default response of MFA question to Yes
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.54'
+$local:ScriptVersion= '2.55'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -394,10 +397,10 @@ function global:Set-Office365Environment {
 }
 
 function global:Get-MultiFactorAuthenticationUsage {
-    $Answer = Read-host  -Prompt 'Would you like to use Modern Authentication? (y/N) '
+    $Answer = Read-host  -Prompt 'Would you like to use Modern Authentication? (Y/n) '
     Switch ($Answer.ToUpper()) {
-        'Y' { $rval = $true }
-        Default { $rval = $false}
+        'N' { $rval = $false }
+        Default { $rval = $true}
     }
     return $rval
 }
@@ -674,7 +677,7 @@ Function global:Update-Office365Modules {
                     If( ($local:Module).RepositorySourceLocation) {
 
                         $local:Version = ($local:Module).Version
-                        Write-Host ('Checking {0}' -f $local:Item[4]) 
+                        Write-Host ('Checking {0}' -f $local:Item[4]) -NoNewLine
 
                         $local:NewerAvailable= $false
                         If( $local:Item[5]) {
@@ -688,6 +691,7 @@ Function global:Update-Office365Modules {
                         }
                         $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
                         If( $OnlineModule) {
+                            Write-Host (' - Local:{0} Online:{1}' -f $local:Version, $OnlineModule.version)
                             If( [System.Version]($local:Version -replace '[^\d\.]','') -lt [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
                                 $local:NewerAvailable= $true
                             }
@@ -697,6 +701,7 @@ Function global:Update-Office365Modules {
                         }
                         Else {
                              # Not installed from online or cannot determine
+                             Write-Host ('Local:{0} Online:N/A' -f $local:Version)
                         }
 
                         If( $local:NewerAvailable) {
@@ -718,13 +723,17 @@ Function global:Update-Office365Modules {
                             If( $local:UpdateSuccess) {
 
                                 $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
-                                $local:Module = $local:ModuleVersions | Sort-Object -Property PublishedDate -Descending | Select -First 1
+                                $local:Module = $local:ModuleVersions | Sort -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select -First 1
                                 $local:LatestVersion = ($local:Module).Version
                                 Write-Host ('Installed {0} version {1}' -f $local:Item[4], $local:LatestVersion ) -ForegroundColor Green
 
                                 # Uninstall all old versions of the module
                                 $local:OldModules= $local:ModuleVersions | Where {$_.Version -ne $local:LatestVersion}
                                 If( $local:OldModules) {
+
+                                    # Unload module when currently loaded
+                                    Remove-Module -Name $local:Item[3] -Force -Confirm:$False -ErrorAction SilentlyContinue
+
                                     ForEach( $OldModule in $local:OldModules) {
                                         Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
                                         Try {
@@ -803,7 +812,6 @@ Function global:Report-Office365Modules {
             }
 
             If( $local:Module) {
-
 
                 $local:Version = ($local:Module).Version
 
@@ -973,7 +981,7 @@ ForEach ( $local:Function in $local:Functions) {
             }
         }
         If ( $local:Item[3]) {
-            $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending
+            $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
             If( $local:Item[5]) {
                 $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
             }
