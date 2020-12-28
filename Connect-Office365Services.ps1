@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.55, December 20th 2020
+    Version 2.56, December 28th 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -276,10 +276,11 @@
     2.55    Fixed updating updating module when it's loaded
             Fixed removal of old modules logic (.100 is newer than .81)
             Set default response of MFA question to Yes
+    2.56    Added PowerShell 7.x support (rewrite of some module management calls)
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.55'
+$local:ScriptVersion= '2.56'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -653,7 +654,12 @@ Function global:Get-Office365Tenant {
 Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
-    $local:AvailableModules= Get-InstalledModule 
+    If( $PSVersionTable.PSVersion.Major -eq 7) {
+        $local:AvailableModules= Get-Module -ListAvailable | Sort -Unique -Property Name
+    }
+    Else {
+        $local:AvailableModules= Get-InstalledModule
+    }
     $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     If( $local:IsAdmin) {
         ForEach ( $local:Function in $local:Functions) {
@@ -785,7 +791,12 @@ Function global:Report-Office365Modules {
 
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
-    $local:AvailableModules= Get-InstalledModule 
+    If( $PSVersionTable.PSVersion.Major -eq 7) {
+        $local:AvailableModules= Get-Module -ListAvailable | Sort -Unique -Property Name
+    }
+    Else {
+        $local:AvailableModules= Get-InstalledModule
+    }
 
     ForEach ( $local:Function in $local:Functions) {
 
@@ -920,7 +931,12 @@ $local:Functions= Get-Office365ModuleInfo
 $local:Repos= Get-PSRepository
 
 Write-Host ('Collecting Module information ..')
-$local:AvailableModules= Get-InstalledModule
+If( $PSVersionTable.PSVersion.Major -eq 7) {
+    $local:AvailableModules= Get-Module -ListAvailable | Sort -Unique -Property Name
+}
+Else {
+    $local:AvailableModules= Get-InstalledModule
+}
 
 ForEach ( $local:Function in $local:Functions) {
 
