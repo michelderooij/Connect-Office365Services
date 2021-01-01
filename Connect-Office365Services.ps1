@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.56, December 28th 2020
+    Version 2.57, January 1st, 2020
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -277,6 +277,7 @@
             Fixed removal of old modules logic (.100 is newer than .81)
             Set default response of MFA question to Yes
     2.56    Added PowerShell 7.x support (rewrite of some module management calls)
+    2.57    Corrected SessionOption to PSSessionOption for Connect-ExchangeOnline (@ladewig)
 #>
 
 #Requires -Version 3.0
