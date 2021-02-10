@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.57, January 1st, 2020
+    Version 2.58, February 10th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -278,10 +278,11 @@
             Set default response of MFA question to Yes
     2.56    Added PowerShell 7.x support (rewrite of some module management calls)
     2.57    Corrected SessionOption to PSSessionOption for Connect-ExchangeOnline (@ladewig)
+    2.58    Replaced web call to retrieve tenant ID with much quicker REST call 
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.56'
+$local:ScriptVersion= '2.58'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -301,12 +302,8 @@ function global:Get-TenantIDfromMail {
     )
     $domainPart= ($mail -split '@')[1]
     If( $domainPart) {
-        $doc= Invoke-WebRequest -Uri ('https://login.microsoft.com/{0}/FederationMetadata/2007-06/FederationMetadata.xml' -f $domainPart)
-        $GUIDmatch= $doc -match 'sts\.windows\.net\/(?<TenantID>[0-9a-f-]*)'
-        If( $doc -and $GUIDmatch) {
-             $res= $matches.TenantID
-        }
-        Else {
+        $res= (Invoke-RestMethod -Uri ('https://login.microsoftonline.com/{0}/v2.0/.well-known/openid-configuration' -f $domainPart)).jwks_uri.split('/')[3]
+        If(!( $res)) {
             Write-Warning 'Could not determine Tenant ID using e-mail address'
             $res= $null
         }
