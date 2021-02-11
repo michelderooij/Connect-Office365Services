@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.58, February 10th, 2021
+    Version 2.60, February 11th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -35,21 +35,20 @@
     =================
     - Connect-AzureActiveDirectory	Connects to Azure Active Directory
     - Connect-AzureRMS           	Connects to Azure Rights Management
-    - Connect-ExchangeOnline     	Connects to Exchange Online
-    - Connect-ExchangeOnlinev2          Connects to Exchange Online using REST module 
+    - Connect-ExchangeOnline     	Connects to Exchange Online (Graph module)
     - Connect-SkypeOnline        	Connects to Skype for Business Online
     - Connect-EOP                	Connects to Exchange Online Protection
     - Connect-ComplianceCenter   	Connects to Compliance Center
     - Connect-SharePointOnline   	Connects to SharePoint Online
-    - Connect-MSTeams                   Connects to Microsoft Teams
+    - Connect-MSTeams               Connects to Microsoft Teams
     - Get-Office365Credentials    	Gets Office 365 credentials
     - Connect-ExchangeOnPremises 	Connects to Exchange On-Premises
     - Get-OnPremisesCredentials    	Gets On-Premises credentials
-    - Get-ExchangeOnPremisesFQDN        Gets FQDN for Exchange On-Premises
-    - Get-Office365Tenant		Gets Office 365 tenant name
+    - Get-ExchangeOnPremisesFQDN    Gets FQDN for Exchange On-Premises
+    - Get-Office365Tenant		    Gets Office 365 tenant name
     - Set-Office365Environment		Configures Uri's and region to use
-    - Update-Office365Modules           Updates supported Office 365 modules
-    - Report-Office365Modules           Report on known vs online module versions
+    - Update-Office365Modules       Updates supported Office 365 modules
+    - Report-Office365Modules       Report on known vs online module versions
 
     Functions to connect to other services provided by the module, e.g. Connect-MSGraph or Connect-MSTeams.
 
@@ -279,16 +278,23 @@
     2.56    Added PowerShell 7.x support (rewrite of some module management calls)
     2.57    Corrected SessionOption to PSSessionOption for Connect-ExchangeOnline (@ladewig)
     2.58    Replaced web call to retrieve tenant ID with much quicker REST call 
+    2.60    Changes due to Skype Online Connector retirement per 15Feb2021 (use MSTeams instead)
+            Changes due to deprecation of ExoPowershellModule (use EXOPSv2 instead)
+            Connect-ExchangeOnline will use ExchangeOnlineManagement
+            Removed obsolete Connect-ExchangeOnlinev2 helper function
+            Replaced variable-substitution strings "$(..)" with -f formatted versions
+            Replaced aliases with full verbs. Happy PSScriptAnalyzer :)
+            Due to removal of non-repository module checks, significant loading speed reduction.
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.58'
+$local:ScriptVersion= '2.60'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
         $local:PromptPrefix= ''
         $ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
-        if( $ThisPrincipal.IsInRole("Administrators")) { 
+        if( $ThisPrincipal.IsInRole( 'Administrators')) { 
 	    $local:PromptPrefix= 'Administrator:'
         }
         $local:Title= '{0}{1} connected to Tenant ID {2}' -f $local:PromptPrefix, $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
@@ -325,15 +331,13 @@ function global:Get-TenantID {
 function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | (Repo)Link 
     @(
-        'Connect|Exchange Online|Connect-ExchangeOnline||Exchange Online (v1)|',
-        'Connect|Exchange Online (v2)|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management (v2)|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
+        'Connect|Exchange Online|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline',
         'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread',
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService',
-        'Connect|Skype for Business Online|Connect-SkypeOnline|SkypeOnlineConnector|Skype for Business Online|https://www.microsoft.com/en-us/download/details.aspx?id=39366',
         'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams',
@@ -418,28 +422,13 @@ function global:Get-ExchangeOnlineClickOnceVersion {
 
 function global:Connect-ExchangeOnline {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host "Connecting to Exchange Online using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
-        $global:myOffice365Services['Session365'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-    }
-    Else {
-        Write-Host "Connecting to Exchange Online using $($global:myOffice365Services['Office365Credentials'].username) .."
-        $global:myOffice365Services['Session365'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
-    }
-    If ( $global:myOffice365Services['Session365'] ) {
-        Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
-    }
-}
-
-function global:Connect-ExchangeOnlinev2 {
-    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     # Other connect options: TrackPerformance, UseMultithreading, Showprogress, EnableEXOTelemetry, LogDirectoryPath
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host "Connecting to Exchange Online (v2) using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        Write-Host ('Connecting to Exchange Online using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
         $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
-        Write-Host "Connecting to Exchange Online (v2) using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
         $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUrl $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     If ( $global:myOffice365Services['Session365'] ) {
@@ -450,7 +439,7 @@ function global:Connect-ExchangeOnlinev2 {
 function global:Connect-ExchangeOnPremises {
     If ( !($global:myOffice365Services['OnPremisesCredentials'])) { Get-OnPremisesCredentials }
     If ( !($global:myOffice365Services['ExchangeOnPremisesFQDN'])) { Get-ExchangeOnPremisesFQDN }
-    Write-Host "Connecting to Exchange On-Premises $($global:myOffice365Services['ExchangeOnPremisesFQDN']) using $($global:myOffice365Services['OnPremisesCredentials'].username) .."
+    Write-Host ('Connecting to Exchange On-Premises {0} using {1} ..' -f $global:myOffice365Services['ExchangeOnPremisesFQDN'], $global:myOffice365Services['OnPremisesCredentials'].username)
     $global:myOffice365Services['SessionExchange'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($global:myOffice365Services['ExchangeOnPremisesFQDN'])/PowerShell" -Credential $global:myOffice365Services['OnPremisesCredentials'] -Authentication Kerberos -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
     If ( $global:myOffice365Services['SessionExchange']) {Import-PSSession -Session $global:myOffice365Services['SessionExchange'] -AllowClobber}
 }
@@ -462,11 +451,11 @@ Function global:Get-ExchangeOnPremisesFQDN {
 function global:Connect-ComplianceCenter {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host "Connecting to Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
+        Write-Host ('Connecting to Security & Compliance Center using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
         $global:myOffice365Services['SessionCC'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
-        Write-Host "Connecting to Security & Compliance Center using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
         $global:myOffice365Services['SessionCC'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
         If ( $global:myOffice365Services['SessionCC'] ) {Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber}
     }
@@ -477,26 +466,24 @@ function global:Connect-ComplianceCenter {
 
 function global:Connect-EOP {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    Write-Host  -InputObject "Connecting to Exchange Online Protection using $($global:myOffice365Services['Office365Credentials'].username) .."
+    Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
     $global:myOffice365Services['SessionEOP'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.protection.outlook.com/powershell-liveid/' -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
     If ( $global:myOffice365Services['SessionEOP'] ) {Import-PSSession -Session $global:myOffice365Services['SessionEOP'] -AllowClobber}
 }
 
 function global:Connect-MSTeams {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    If (($global:myOffice365Services['Office365Credentials']).username -like '*.onmicrosoft.com') {
-        $global:myOffice365Services['Office365Tenant'] = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
-    }
-    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host "Connecting to Microsoft Teams using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
-        $Parms = @{'AccountId' = ($global:myOffice365Services['Office365Credentials']).username}
-    }
-    Else {
-        Write-Host "Connecting to Microsoft Teams using $($global:myOffice365Services['Office365Credentials'].username) .."
-        $Parms = @{Credential = $global:myOffice365Services['Office365Credentials'] }
-    }
-    If ( $global:myOffice365Services['Office365Tenant']) { $Parms['TenantId'] = $global:myOffice365Services['Office365Tenant'] }
-    Connect-MicrosoftTeams @Parms
+    Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+    Connect-MicrosoftTeams -Credential $global:myOffice365Services['Office365Credentials']
+}
+
+function global:Connect-SkypeOnline {
+    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+    Write-Host ('Connecting to Skype Online using {0}' -f $global:myOffice365Services['Office365Credentials'].username)
+    $global:myOffice365Services['SessionSFBO']= New-CsOnlineSession -Credential $global:myOffice365Services['Office365Credentials']
+    If ( $global:myOffice365Services['SessionSFBO'] ) {
+        Import-PSSession -Session $global:myOffice365Services['SessionSFBO'] -AllowClobber
+    }    
 }
 
 function global:Connect-AzureActiveDirectory {
@@ -509,7 +496,7 @@ function global:Connect-AzureActiveDirectory {
             $Parms = @{'AzureEnvironment' = $global:myOffice365Services['AzureEnvironment']}
         }
         Else {
-            Write-Host "Connecting to Azure Active Directory using $($global:myOffice365Services['Office365Credentials'].username) .."
+            Write-Host ('Connecting to Azure Active Directory using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
             $Parms = @{'Credential' = $global:myOffice365Services['Office365Credentials']; 'AzureEnvironment' = $global:myOffice365Services['AzureEnvironment']}
         }
         Connect-AzureAD @Parms
@@ -518,7 +505,7 @@ function global:Connect-AzureActiveDirectory {
         If ( !(Get-Module -Name MSOnline)) {Import-Module -Name MSOnline -ErrorAction SilentlyContinue}
         If ( Get-Module -Name MSOnline) {
             If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-            Write-Host "Connecting to Azure Active Directory using $($global:myOffice365Services['Office365Credentials'].username) .."
+            Write-Host ('Connecting to Azure Active Directory using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
             Connect-MsolService -Credential $global:myOffice365Services['Office365Credentials'] -AzureEnvironment $global:myOffice365Services['AzureEnvironment']
         }
         Else {Write-Error -Message 'Cannot connect to Azure Active Directory - problem loading module.'}
@@ -529,32 +516,10 @@ function global:Connect-AIP {
     If ( !(Get-Module -Name AIPService)) {Import-Module -Name AIPService -ErrorAction SilentlyContinue}
     If ( Get-Module -Name AIPService) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        Write-Host "Connecting to Azure Information Protection using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Write-Host ('Connecting to Azure Information Protection using {0}' -f $global:myOffice365Services['Office365Credentials'].username)
         Connect-AipService -Credential $global:myOffice365Services['Office365Credentials'] 
     }
     Else {Write-Error -Message 'Cannot connect to Azure Information Protection - problem loading module.'}
-}
-
-function global:Connect-SkypeOnline {
-    If ( !(Get-Module -Name SkypeOnlineConnector)) {Import-Module -Name SkypeOnlineConnector -ErrorAction SilentlyContinue}
-    If ( Get-Module -Name SkypeOnlineConnector) {
-        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-            Write-Host "Connecting to Skype for Business Online using $($global:myOffice365Services['Office365Credentials'].username) with Modern Authentication .."
-            $Parms = @{'Username' = ($global:myOffice365Services['Office365Credentials']).username}
-        }
-        Else {
-            Write-Host "Connecting to Skype for Business Online using $($global:myOffice365Services['Office365Credentials'].username) .."
-            $Parms = @{'Credential' = $global:myOffice365Services['Office365Credentials']}
-        }
-        $global:myOffice365Services['SessionSFB'] = New-CsOnlineSession @Parms
-        If ( $global:myOffice365Services['SessionSFB'] ) {
-            Import-PSSession -Session $global:myOffice365Services['SessionSFB'] -AllowClobber
-        }
-    }
-    Else {
-        Write-Error -Message 'Cannot connect to Skype for Business Online - problem loading module.'
-    }
 }
 
 function global:Connect-SharePointOnline {
@@ -569,11 +534,18 @@ function global:Connect-SharePointOnline {
         }
         If ( $global:myOffice365Services['Office365CredentialsMFA']) {
             Write-Host 'Connecting to SharePoint Online with Modern Authentication ..'
-            $Parms = @{'url' = "https://$($global:myOffice365Services['Office365Tenant'])-admin.sharepoint.com"; 'Region' = $global:myOffice365Services['SharePointRegion']}
+            $Parms = @{
+                url= 'https://{0}-admin.sharepoint.com' -f $($global:myOffice365Services['Office365Tenant'])
+                region= $global:myOffice365Services['SharePointRegion']
+            }
         }
         Else {
             Write-Host "Connecting to SharePoint Online using $($global:myOffice365Services['Office365Credentials'].username) .."
-            $Parms = @{'url' = "https://$($global:myOffice365Services['Office365Tenant'])-admin.sharepoint.com"; 'Credential' = $global:myOffice365Services['Office365Credentials']; 'Region' = $global:myOffice365Services['SharePointRegion']}
+            $Parms = @{
+                url= 'https://{0}-admin.sharepoint.com' -f $global:myOffice365Services['Office365Tenant']
+                credential= $global:myOffice365Services['Office365Credentials']
+                region= $global:myOffice365Services['SharePointRegion']
+            }
         }
         Connect-SPOService @Parms
     }
@@ -604,13 +576,13 @@ Function global:Get-Office365Credentials {
     $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
     $local:MFAenabledModulePresence= $false
     # Check for MFA-enabled modules 
-    If ( (Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule') -or (Get-Module -Name 'MicrosoftTeams')) {
+    If (( Get-Module -Name 'MicrosoftTeams') -or (Get-Module -Name 'ExchangeOnlineManagement')) {
         $local:MFAenabledModulePresence= $true
     }
     Else {
         # Check for MFA-enabled modules with version dependency
-        $MFAMods= @('SkypeOnlineConnector|7.0', 'Microsoft.Online.Sharepoint.PowerShell|16.0')
-	ForEach( $MFAMod in $MFAMods) {
+        $local:MFAMods= @('Microsoft.Online.Sharepoint.PowerShell|16.0')
+	    ForEach( $local:MFAMod in $local:MFAMods) {
             $local:Item = ($local:MFAMod).split('|')
             If( (Get-Module -Name $local:Item[0] -ListAvailable)) {
                 $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge (ConvertTo-SystemVersion -Text $local:Item[1] ) )
@@ -653,7 +625,7 @@ Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
     If( $PSVersionTable.PSVersion.Major -eq 7) {
-        $local:AvailableModules= Get-Module -ListAvailable | Sort -Unique -Property Name
+        $local:AvailableModules= Get-Module -ListAvailable | Sort-Object -Unique -Property Name
     }
     Else {
         $local:AvailableModules= Get-InstalledModule
@@ -664,15 +636,15 @@ Function global:Update-Office365Modules {
             $local:Item = ($local:Function).split('|')
             If( $local:Item[3]) {
                 $local:CheckThisModule= $false
-                If( ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Select -First 1).RepositorySourceLocation).Authority -eq (([System.Uri]$local:Item[5])).Authority) {
+                If( ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Select-Object -First 1).RepositorySourceLocation).Authority -eq (([System.Uri]$local:Item[5])).Authority) {
                     $local:CheckThisModule= $true
                 }
 
                 If( $local:CheckThisModule) {
 
-                    $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending | Select-Object -First 1
+                    $local:Module = $local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending | Select-Object -First 1
                     If( $local:Item[5]) {
-                       $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+                       $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
                     }
                     Else {
                         $local:Module= $local:Module | Select-Object -First 1
@@ -727,12 +699,12 @@ Function global:Update-Office365Modules {
                             If( $local:UpdateSuccess) {
 
                                 $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
-                                $local:Module = $local:ModuleVersions | Sort -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select -First 1
+                                $local:Module = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                                 $local:LatestVersion = ($local:Module).Version
                                 Write-Host ('Installed {0} version {1}' -f $local:Item[4], $local:LatestVersion ) -ForegroundColor Green
 
                                 # Uninstall all old versions of the module
-                                $local:OldModules= $local:ModuleVersions | Where {$_.Version -ne $local:LatestVersion}
+                                $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
                                 If( $local:OldModules) {
 
                                     # Unload module when currently loaded
@@ -790,7 +762,7 @@ Function global:Report-Office365Modules {
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
     If( $PSVersionTable.PSVersion.Major -eq 7) {
-        $local:AvailableModules= Get-Module -ListAvailable | Sort -Unique -Property Name
+        $local:AvailableModules= Get-Module -ListAvailable | Sort-Object -Unique -Property Name
     }
     Else {
         $local:AvailableModules= Get-InstalledModule
@@ -799,78 +771,47 @@ Function global:Report-Office365Modules {
     ForEach ( $local:Function in $local:Functions) {
 
         $local:Item = ($local:Function).split('|')
-        If( $local:Item[3]) {
 
-            # Use specific or default repository
-            If( $local:Item[5]) {
-                $local:Repo= $local:Repos | Where-Object {([System.Uri]($_.SourceLocation)).Authority -eq (([System.Uri]$local:Item[5])).Authority}
-            }
-            If( [string]::IsNullOrEmpty( $local:Repo )) { 
-                $local:Repo = 'PSGallery'
-            }
-            Else {
-                $local:Repo= ($local:Repo).Name
-            }
-
-            $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending
-            If( $local:Item[5]) {
-                $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
-            }
-            Else {
-                $local:Module= $local:Module | Select-Object -First 1
-            }
-
-            If( $local:Module) {
-
-                $local:Version = ($local:Module).Version
-
-                Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Version) -NoNewLine
-                $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
-                If( $OnlineModule) {
-                    Write-Host ('v{0}' -f (ConvertTo-SystemVersion -Text $OnlineModule.version)) -NoNewLine
-                }
-                Else {
-                    Write-Host ('N/A') -NoNewLine
-                }
-                If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
-                    Write-Host (' Unknown') -ForegroundColor Yellow
-                }
-                Else {
-                    If( (ConvertTo-SystemVersion -Text $local:Version) -ige (ConvertTo-SystemVersion -Text $OnlineModule.version)) {
-                        Write-Host (' OK') -ForegroundColor Green
-                    }
-                    Else {
-                        Write-Host (' Outdated') -ForegroundColor RED
-                    }
-                }
-            }
+        # Use specific or default repository
+        If( $local:Item[5]) {
+            $local:Repo= $local:Repos | Where-Object {([System.Uri]($_.SourceLocation)).Authority -eq (([System.Uri]$local:Item[5])).Authority}
+        }
+        If( [string]::IsNullOrEmpty( $local:Repo )) { 
+            $local:Repo = 'PSGallery'
         }
         Else {
+            $local:Repo= ($local:Repo).Name
+        }
 
-            Switch( $local:Item[1]) {
+        $local:Module = $local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending
+        If( $local:Item[5]) {
+            $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+        }
+        Else {
+            $local:Module= $local:Module | Select-Object -First 1
+        }
 
-                'Exchange Online' {
+        If( $local:Module) {
 
-                    #Scan for Exchange & SCC MFA PowerShell module presence
-                    $local:ExchangeMFAModule = 'Microsoft.Exchange.Management.ExoPowershellModule'
-                    $local:ExchangeADALModule = 'Microsoft.IdentityModel.Clients.ActiveDirectory'
-                    $local:ModuleList = @(Get-ChildItem -Path "$($env:LOCALAPPDATA)\Apps\2.0" -Filter "$($local:ExchangeMFAModule).manifest" -Recurse -ErrorAction SilentlyContinue ) | Sort-Object LastWriteTime -Desc | Select-Object -First 1
+            $local:Version = ($local:Module).Version
 
-                    If ( $local:ModuleList) {
-                        $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath "$($local:ExchangeMFAModule).dll"
-                        $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
-                        Write-Host ('Module: ExoPowershellModule - Checked v{0}, Online: ' -f $local:ModuleVersion) -NoNewLine
-
-                        $OnlineModuleVersion= Get-ExchangeOnlineClickOnceVersion
-                        Write-Host ('v{0}' -f [System.Version]($OnlineModuleVersion)) -NoNewLine
-
-                        If( (ConvertTo-SystemVersion -Text $local:ModuleVersion) -ieq (ConvertTo-SystemVersion -Text $OnlineModuleVersion)) {
-                            Write-Host (' OK') -ForegroundColor Green
-                        }
-                        Else {
-                            Write-Host (' Outdated') -ForegroundColor RED
-                        }
-                    }
+            Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Version) -NoNewLine
+            $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
+            If( $OnlineModule) {
+                Write-Host ('v{0}' -f (ConvertTo-SystemVersion -Text $OnlineModule.version)) -NoNewLine
+            }
+            Else {
+                Write-Host ('N/A') -NoNewLine
+            }
+            If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
+                Write-Host (' Unknown') -ForegroundColor Yellow
+            }
+            Else {
+                If( (ConvertTo-SystemVersion -Text $local:Version) -ige (ConvertTo-SystemVersion -Text $OnlineModule.version)) {
+                    Write-Host (' OK') -ForegroundColor Green
+                }
+                Else {
+                    Write-Host (' Outdated') -ForegroundColor RED
                 }
             }
         }
@@ -930,53 +871,24 @@ $local:Repos= Get-PSRepository
 
 Write-Host ('Collecting Module information ..')
 If( $PSVersionTable.PSVersion.Major -eq 7) {
-    $local:AvailableModules= Get-Module -ListAvailable | Sort -Unique -Property Name
+    $local:AvailableModules= Get-Module -ListAvailable | Sort-Object -Unique -Property Name
 }
 Else {
     $local:AvailableModules= Get-InstalledModule
 }
 
+
+If( $local:AvailableModules | Where-Object {$_.Name -eq 'SkypeOnlineConnector'}) {
+    Write-Warning 'Notice: The Skype for Business Online Connector PowerShell module functionality has moved to the Microsoft Teams module.  retires February 15th, 2021.'
+}
+If( $local:AvailableModules | Where-Object {$_.Name -eq 'Microsoft.Exchange.Management.ExoPowershellModule'}) {
+    Write-Warning 'Notice: The Exchange Online PowerShell module has been replaced by the Exchange Online Management module.'
+}
+
 ForEach ( $local:Function in $local:Functions) {
 
     $local:Item = ($local:Function).split('|')
-    If( [string]::IsNullOrEmpty($local:Item[3])) {
-        # Non-repo module
-
-        Switch( $local:Item[1]) {
-            'Exchange Online' {
-
-                #Scan for Exchange & SCC MFA PowerShell module presence
-                $local:ExchangeMFAModule = 'Microsoft.Exchange.Management.ExoPowershellModule'
-                $local:ExchangeADALModule = 'Microsoft.IdentityModel.Clients.ActiveDirectory'
-                $local:ModuleList = @(Get-ChildItem -Path ('{0}\Apps\2.0' -f $env:LOCALAPPDATA) -Filter ('{0}.manifest' -f $local:ExchangeMFAModule) -Recurse -ErrorAction SilentlyContinue ) | Sort-Object LastWriteTime -Desc | Select-Object -First 1
-
-                If ( $local:ModuleList) {
-                    $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath ('{0}.dll' -f $local:ExchangeMFAModule)
-                    $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.ProductVersion
-                    Write-Host ('Module {0} installed (v{1})' -f $local:Item[4], $local:ModuleVersion) -ForegroundColor Green
-                    Import-Module -FullyQualifiedName $local:ModuleName -Force
-                    $local:ModuleName = Join-path -Path $local:ModuleList[0].Directory.FullName -ChildPath ('{0}.dll' -f $local:ExchangeADALModule)
-                    If ( Test-Path -Path $local:ModuleName) {
-                        $local:ModuleVersion = (Get-Item -Path $local:ModuleName).VersionInfo.FileVersion
-                        Write-Host "ADAL module found (version $($local:ModuleVersion))" -ForegroundColor Green
-                        Add-Type -Path $local:ModuleName
-                    }
-                    $local:ModuleMatch= $true
-                }
-                Else {
-                    Write-Verbose 'Exchange Modern Authentication PowerShell Module not found (http://bit.ly/ExOPSModule)'
-                }
-
-            }
-            default {
-                $local:ModuleMatch= $true
-            }
-        }
-    }
-    Else {
-        # Match module from specific repo
-        $local:ModuleMatch= ([System.Uri]($local:AvailableModules | Where {$_.Name -ieq $local:Item[3] }).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
-    }
+    $local:ModuleMatch= ([System.Uri]($local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] }).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
 
     If( $local:ModuleMatch) {
         If ( $local:CreateISEMenu) {
@@ -995,9 +907,9 @@ ForEach ( $local:Function in $local:Functions) {
             }
         }
         If ( $local:Item[3]) {
-            $local:Module = $local:AvailableModules | Where {$_.Name -ieq $local:Item[3] } | Sort -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
+            $local:Module = $local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] } | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
             If( $local:Item[5]) {
-                $local:Module= $local:Module | Where {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+                $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
             }
             Else {
                 $local:Module= $local:Module | Select-Object -First 1
@@ -1007,6 +919,6 @@ ForEach ( $local:Function in $local:Functions) {
         }
     }
     Else {
-        Write-Host "$($local:Item[4]) module not found ($($local:Item[5]))" 
+        Write-Host ('{0} module not found ({1})' -f $local:Item[4], $local:Item[5])
     }
 }
