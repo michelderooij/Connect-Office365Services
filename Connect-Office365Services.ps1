@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.60, February 11th, 2021
+    Version 2.61, February 15th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -285,10 +285,12 @@
             Replaced variable-substitution strings "$(..)" with -f formatted versions
             Replaced aliases with full verbs. Happy PSScriptAnalyzer :)
             Due to removal of non-repository module checks, significant loading speed reduction.
+    2.61    Updated connecting to EOP and S&C center using EXOPSv2 module
+            Removed needless passing of AzureADAuthorizationEndpointUri when specifying UserPrincipalName
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.60'
+$local:ScriptVersion= '2.61'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -363,7 +365,8 @@ function global:Set-Office365Environment {
     Switch ( $Environment) {
         'Germany' {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office.de/PowerShell-LiveID'
-            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.de/PowerShell-LiveId'
+            $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.de/PowerShell-LiveId'
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.microsoftonline.de/common'
             $global:myOffice365Services['SharePointRegion'] = 'Germany'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureGermanyCloud'
@@ -371,6 +374,7 @@ function global:Set-Office365Environment {
         'China' {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://partner.outlook.cn/PowerShell-LiveID'
             $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.com/PowerShell-LiveId'
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.chinacloudapi.cn/common'
             $global:myOffice365Services['SharePointRegion'] = 'China'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureChinaCloud'
@@ -378,6 +382,7 @@ function global:Set-Office365Environment {
         'AzurePPE' {
             $global:myOffice365Services['ConnectionEndpointUri'] = ''
             $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.com/PowerShell-LiveId'
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = ''
             $global:myOffice365Services['SharePointRegion'] = ''
             $global:myOffice365Services['AzureEnvironment'] = 'AzurePPE'
@@ -385,6 +390,7 @@ function global:Set-Office365Environment {
         'USGovernment' {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office365.com/PowerShell-LiveId'
             $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.com/PowerShell-LiveId'
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login-us.microsoftonline.com/'
             $global:myOffice365Services['SharePointRegion'] = 'ITAR'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureUSGovernment'
@@ -392,6 +398,7 @@ function global:Set-Office365Environment {
         default {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office365.com/PowerShell-LiveId'
             $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
+            $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.com/PowerShell-LiveId'
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.windows.net/common'
             $global:myOffice365Services['SharePointRegion'] = 'Default'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureCloud'
@@ -425,7 +432,7 @@ function global:Connect-ExchangeOnline {
     # Other connect options: TrackPerformance, UseMultithreading, Showprogress, EnableEXOTelemetry, LogDirectoryPath
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
         Write-Host ('Connecting to Exchange Online using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
         Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
@@ -452,23 +459,30 @@ function global:Connect-ComplianceCenter {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
         Write-Host ('Connecting to Security & Compliance Center using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['SessionCC'] = New-ExoPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -AzureADAuthorizationEndpointUri $global:myOffice365Services['AzureADAuthorizationEndpointUri'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
         Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['SessionCC'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
-        If ( $global:myOffice365Services['SessionCC'] ) {Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber}
+        $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     If ( $global:myOffice365Services['SessionCC'] ) {
         Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber
-    }    
+    }
 }
 
 function global:Connect-EOP {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-    $global:myOffice365Services['SessionEOP'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri 'https://ps.protection.outlook.com/powershell-liveid/' -Credential $global:myOffice365Services['Office365Credentials'] -Authentication Basic -AllowRedirection
-    If ( $global:myOffice365Services['SessionEOP'] ) {Import-PSSession -Session $global:myOffice365Services['SessionEOP'] -AllowClobber}
+    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+        Write-Host ('Connecting to Exchange Online Protection using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        $global:myOffice365Services['SessionEOP'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['EOPConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+    }
+    Else {
+        Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        $global:myOffice365Services['SessionEOP'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['EOPConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+    }
+    If ( $global:myOffice365Services['SessionEOP'] ) {
+        Import-PSSession -Session $global:myOffice365Services['SessionEOP'] -AllowClobber
+    }
 }
 
 function global:Connect-MSTeams {
