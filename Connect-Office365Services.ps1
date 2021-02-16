@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.62, February 15th, 2021
+    Version 2.63, February 16th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -288,10 +288,11 @@
     2.61    Updated connecting to EOP and S&C center using EXOPSv2 module
             Removed needless passing of AzureADAuthorizationEndpointUri when specifying UserPrincipalName
     2.62    Added -ProxyAccessType AutoDetect to default SessionOptions
+    2.63    Changed default ProxyAccessType to None
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.62'
+$local:ScriptVersion= '2.63'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -872,7 +873,7 @@ If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
 If( -not( Get-Variable myOffice365Services -ErrorAction SilentlyContinue )) { $global:myOffice365Services=@{} }
 
 # Local Exchange session options
-$global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption -ProxyAccessType AutoDetect
+$global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption -ProxyAccessType None
 
 # Initialize environment & endpoints
 Set-Office365Environment -AzureEnvironment 'Default'
