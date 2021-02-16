@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.63, February 16th, 2021
+    Version 2.64, February 16th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -289,10 +289,11 @@
             Removed needless passing of AzureADAuthorizationEndpointUri when specifying UserPrincipalName
     2.62    Added -ProxyAccessType AutoDetect to default SessionOptions
     2.63    Changed default ProxyAccessType to None
+    2.64    Structured Connect-MsTeams
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.63'
+$local:ScriptVersion= '2.64'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -372,6 +373,7 @@ function global:Set-Office365Environment {
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.microsoftonline.de/common'
             $global:myOffice365Services['SharePointRegion'] = 'Germany'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureGermanyCloud'
+            $global:myOffice365Services['TeamsEnvironment'] = ''
         }
         'China' {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://partner.outlook.cn/PowerShell-LiveID'
@@ -380,6 +382,7 @@ function global:Set-Office365Environment {
             $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.chinacloudapi.cn/common'
             $global:myOffice365Services['SharePointRegion'] = 'China'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureChinaCloud'
+            $global:myOffice365Services['TeamsEnvironment'] = ''
         }
         'AzurePPE' {
             $global:myOffice365Services['ConnectionEndpointUri'] = ''
@@ -489,8 +492,16 @@ function global:Connect-EOP {
 
 function global:Connect-MSTeams {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-    Connect-MicrosoftTeams -Credential $global:myOffice365Services['Office365Credentials']
+    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+        Write-Host ('Connecting to Microsoft Teams using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        Connect-MicrosoftTeams -AccountId ($global:myOffice365Services['Office365Credentials']).UserName -TenantId $myOffice365Services['TenantId']
+    }
+    Else {
+        Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        Connect-MicrosoftTeams -Credential $global:myOffice365Services['Office365Credentials']
+    }
+
+    
 }
 
 function global:Connect-SkypeOnline {
