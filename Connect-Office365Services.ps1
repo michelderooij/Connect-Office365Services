@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.64, February 16th, 2021
+    Version 2.65, February 22th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -290,10 +290,11 @@
     2.62    Added -ProxyAccessType AutoDetect to default SessionOptions
     2.63    Changed default ProxyAccessType to None
     2.64    Structured Connect-MsTeams
+    2.65    Fixed connecting to AzureAD using MFA not using provided Username
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.64'
+$local:ScriptVersion= '2.65'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -520,7 +521,7 @@ function global:Connect-AzureActiveDirectory {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         If ( $global:myOffice365Services['Office365CredentialsMFA']) {
             Write-Host 'Connecting to Azure Active Directory with Modern Authentication ..'
-            $Parms = @{'AzureEnvironment' = $global:myOffice365Services['AzureEnvironment']}
+            $Parms = @{AccountId= $global:myOffice365Services['Office365Credentials'].UserName; AzureEnvironment= $global:myOffice365Services['AzureEnvironment']}
         }
         Else {
             Write-Host ('Connecting to Azure Active Directory using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
