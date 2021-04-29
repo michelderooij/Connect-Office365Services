@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.70, April 29th, 2021
+    Version 2.71, April 29th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -297,10 +297,11 @@
             Removed SharePointPnPPowerShellOnline support
             Removed obsolete code for MFA module presence check
             Updated AzureADAuthorizationEndpointUri for Common/GCC
+    2.71    Revised module updating using Install-Package when available
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.70'
+$local:ScriptVersion= '2.71'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -751,12 +752,23 @@ Function global:Update-Office365Modules {
 
                             $local:UpdateSuccess= $false
                             Try {
+                                $Parm= @{
+                                    AllowPrerelease= $global:myOffice365Services['AllowPrerelease']
+                                    Force= $True
+                                    Confirm= $False
+                                }
                                 # Pass AcceptLicense if current version of UpdateModule supports it
                                 If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
-                                    Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false -AcceptLicense
+                                    $Parm.AcceptLicense= $True
                                 }
-                                Else {
-                                    Update-Module -Name $local:Item[3] -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -Force -Confirm:$false
+                                If( Get-Command Install-Package -ErrorAction SilentlyContinue) {
+                                    If( ( Get-Command -name Install-Package).Parameters['SkipPublisherCheck']) {
+                                        $Parm.SkipPublisherCheck= $True
+                                    }
+                                    Install-Package -Name $local:Item[3] @Parm | Out-Null
+                                }
+                                Else{
+                                    Update-Module -Name $local:Item[3] @Parm
                                 }
                                 $local:UpdateSuccess= $true
                             }
@@ -781,7 +793,7 @@ Function global:Update-Office365Modules {
                                     ForEach( $OldModule in $local:OldModules) {
                                         Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
                                         Try {
-                                            Uninstall-Module -Name $OldModule.Name -RequiredVersion $OldModule.Version -Confirm:$false -Force
+                                            $OldModule | Uninstall-Module -Confirm:$false -Force
                                         }
                                         Catch {
                                             Write-Error ('Problem uninstalling module {0} version {1}' -f $OldModule.Name, $OldModule.Version) 
