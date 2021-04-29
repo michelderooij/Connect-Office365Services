@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.65, February 22th, 2021
+    Version 2.70, April 29th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -291,10 +291,16 @@
     2.63    Changed default ProxyAccessType to None
     2.64    Structured Connect-MsTeams
     2.65    Fixed connecting to AzureAD using MFA not using provided Username
+    2.66    Reporting change in #cmdlets after updating
+    2.70    Added support for all overloaded Connect-ExchangeOnline parameters from ExchangeOnlineManagement module 
+            Added PnP.PowerShell module support
+            Removed SharePointPnPPowerShellOnline support
+            Removed obsolete code for MFA module presence check
+            Updated AzureADAuthorizationEndpointUri for Common/GCC
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.65'
+$local:ScriptVersion= '2.70'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -337,7 +343,7 @@ function global:Get-TenantID {
 function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | (Repo)Link 
     @(
-        'Connect|Exchange Online|Connect-ExchangeOnlinev2|ExchangeOnlineManagement|Exchange Online Management|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
+        'Connect|Exchange Online|Connect-ExchangeOnline|ExchangeOnlineManagement|Exchange Online Management|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
         'Connect|Exchange Online Protection|Connect-EOP',
         'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
         'Connect|Azure AD (v1)|Connect-MSOnline|MSOnline|Azure Active Directory (v1)|https://www.powershellgallery.com/packages/MSOnline',
@@ -349,7 +355,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams',
         'Connect|Microsoft Commerce|Connect-MSCommerce|MSCommerce|Microsoft Commerce|https://www.powershellgallery.com/packages/MSCommerce',
         'Connect|Microsoft.Graph.Teams|Connect-Graph|Microsoft.Graph.Teams.Team|Microsoft.Graph.Teams.Team|https://www.powershellgallery.com/packages/Microsoft.Graph.Teams.Team',
-        'Connect|SharePoint PnP Online|Connect-PnPOnline|SharePointPnPPowerShellOnline|SharePointPnP Online|https://www.powershellgallery.com/packages/SharePointPnPPowerShellOnline',
+        'Connect|PnP.PowerShell|Connect-PnPOnline|PnP.PowerShell|PnP.PowerShell|https://www.powershellgallery.com/packages/PnP.PowerShell',
         'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune',
@@ -397,7 +403,7 @@ function global:Set-Office365Environment {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office365.com/PowerShell-LiveId'
             $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
             $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.com/PowerShell-LiveId'
-            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login-us.microsoftonline.com/'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.microsoftonline.com/common'
             $global:myOffice365Services['SharePointRegion'] = 'ITAR'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureUSGovernment'
         }
@@ -405,7 +411,7 @@ function global:Set-Office365Environment {
             $global:myOffice365Services['ConnectionEndpointUri'] = 'https://outlook.office365.com/PowerShell-LiveId'
             $global:myOffice365Services['SCCConnectionEndpointUri'] = 'https://ps.compliance.protection.outlook.com/PowerShell-LiveId'
             $global:myOffice365Services['EOPConnectionEndpointUri'] = 'https://ps.protection.protection.outlook.com/PowerShell-LiveId'
-            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.windows.net/common'
+            $global:myOffice365Services['AzureADAuthorizationEndpointUri'] = 'https://login.microsoftonline.com/common'
             $global:myOffice365Services['SharePointRegion'] = 'Default'
             $global:myOffice365Services['AzureEnvironment'] = 'AzureCloud'
         }
@@ -434,16 +440,67 @@ function global:Get-ExchangeOnlineClickOnceVersion {
 }
 
 function global:Connect-ExchangeOnline {
-    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    # Other connect options: TrackPerformance, UseMultithreading, Showprogress, EnableEXOTelemetry, LogDirectoryPath
-    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host ('Connecting to Exchange Online using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUri $global:myOffice365Services['ConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+    [CmdletBinding()]
+    Param(
+        [string]$ConnectionUri,
+        [string]$AzureADAuthorizationEndpointUri,
+        [System.Management.Automation.Remoting.PSSessionOption]$PSSessionOption,
+        [switch]$BypassMailboxAnchoring= $false,
+        [string]$DelegatedOrganization,
+        [string]$Prefix,
+        [switch]$ShowBanner= $False,
+        [string]$UserPrincipalName,
+        [System.Management.Automation.PSCredential]$Credential,
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
+        [string]$CertificateFilePath,
+        [System.Security.SecureString]$CertificatePassword,
+        [string]$CertificateThumbprint,
+        [string]$AppId,
+        [string]$Organization,
+        [switch]$EnableErrorReporting,
+        [string]$LogDirectoryPath,
+        $LogLevel,
+        [bool]$TrackPerformance,
+        [bool]$ShowProgress= $True,
+        [bool]$UseMultithreading,
+        [uint32]$PageSize,
+        [switch]$Device,
+        [switch]$InlineCredential,
+        [string[]]$CommandName,
+        [string[]]$FormatTypeName
+    )
+    if (!( $PSBoundParameters.ContainsKey('ConnectionUri'))) {
+        $PSBoundParameters['ConnectionUri']= $global:myOffice365Services['ConnectionEndpointUri']
+    }
+    if (!( $PSBoundParameters.ContainsKey('AzureADAuthorizationEndpointUri'))) {
+        $PSBoundParameters['AzureADAuthorizationEndpointUri']= $global:myOffice365Services['AzureADAuthorizationEndpointUri']
+    }
+    if (!( $PSBoundParameters.ContainsKey('PSSessionOption'))) {
+        $PSBoundParameters['PSSessionOption']= $global:myOffice365Services['SessionExchangeOptions']
+    }
+    If ( $PSBoundParameters.ContainsKey('UserPrincipalName') -or $PSBoundParameters.ContainsKey('Certificate') -or $PSBoundParameters.ContainsKey('CertificateFilePath') -or $PSBoundParameters.ContainsKey('CertificateThumbprint') -or $PSBoundParameters.ContainsKey('AppId')) {
+        $global:myOffice365Services['Office365CredentialsMFA']= $True
+        Write-Host ('Connecting to Exchange Online with specified Modern Authentication method ..')
     }
     Else {
-        Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline -ConnectionUrl $global:myOffice365Services['ConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        If ( $PSBoundParameters.ContainsKey('Credential')) {
+            If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+            If ( $global:myOffice365Services['Office365CredentialsMFA']) {
+                Write-Host ('Connecting to Exchange Online with {0} using Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
+                $PSBoundParameters['UserPrincipalName']= ($global:myOffice365Services['Office365Credentials']).UserName
+            }
+            Else {
+                Write-Host ('Connecting to Exchange Online with {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+                $PSBoundParameters['Credential']= $global:myOffice365Services['Office365Credentials'] 
+            }
+        }
+        Else {
+            Write-Host ('Connecting to Exchange Online with {0} using Legacy Authentication..' -f $PSBoundParameters['Credential'].UserName)
+            $global:myOffice365Services['Office365CredentialsMFA']= $False
+            $global:myOffice365Services['Office365Credentials']= $PSBoundParameters['Credential']
+        }
     }
+    $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline @PSBoundParameters
     If ( $global:myOffice365Services['Session365'] ) {
         Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
     }
@@ -601,28 +658,10 @@ function global:Connect-PowerApps {
 }
 
 Function global:Get-Office365Credentials {
-    $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', '', '')
-    $local:MFAenabledModulePresence= $false
-    # Check for MFA-enabled modules 
-    If (( Get-Module -Name 'MicrosoftTeams') -or (Get-Module -Name 'ExchangeOnlineManagement')) {
-        $local:MFAenabledModulePresence= $true
-    }
-    Else {
-        # Check for MFA-enabled modules with version dependency
-        $local:MFAMods= @('Microsoft.Online.Sharepoint.PowerShell|16.0')
-	    ForEach( $local:MFAMod in $local:MFAMods) {
-            $local:Item = ($local:MFAMod).split('|')
-            If( (Get-Module -Name $local:Item[0] -ListAvailable)) {
-                $local:MFAenabledModulePresence= $local:MFAenabledModulePresence -or ((Get-Module -Name $local:Item[0] -ListAvailable).Version -ge (ConvertTo-SystemVersion -Text $local:Item[1] ) )
-            }
-        }
-    }
-    If( $local:MFAEnabledModulePresence) {
-        $global:myOffice365Services['Office365CredentialsMFA'] = Get-MultiFactorAuthenticationUsage
-    }
-    Else {
-        $global:myOffice365Services['Office365CredentialsMFA'] = $false
-    }
+
+    $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', $global:myOffice365Services['Office365Credentials'].UserName, '')
+    $local:MFAenabledModulePresence= $true
+    $global:myOffice365Services['Office365CredentialsMFA'] = Get-MultiFactorAuthenticationUsage
     Get-TenantID
     Set-WindowTitle
 }
@@ -709,6 +748,7 @@ Function global:Update-Office365Modules {
                         }
 
                         If( $local:NewerAvailable) {
+
                             $local:UpdateSuccess= $false
                             Try {
                                 # Pass AcceptLicense if current version of UpdateModule supports it
@@ -729,7 +769,7 @@ Function global:Update-Office365Modules {
                                 $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
                                 $local:Module = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                                 $local:LatestVersion = ($local:Module).Version
-                                Write-Host ('Installed {0} version {1}' -f $local:Item[4], $local:LatestVersion ) -ForegroundColor Green
+                                Write-Host ('Updated {0} to version {1}' -f $local:Item[4], $local:LatestVersion) -ForegroundColor Green
 
                                 # Uninstall all old versions of the module
                                 $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
@@ -744,7 +784,7 @@ Function global:Update-Office365Modules {
                                             Uninstall-Module -Name $OldModule.Name -RequiredVersion $OldModule.Version -Confirm:$false -Force
                                         }
                                         Catch {
-                                            Write-Error ('Problem uninstalling module {0} version {1}: {2}' -f $OldModule.Name, $OldModule.Version, $Error[0].Message) 
+                                            Write-Error ('Problem uninstalling module {0} version {1}' -f $OldModule.Name, $OldModule.Version) 
                                         }
                                     }
                                 }
