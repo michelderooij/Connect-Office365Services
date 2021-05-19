@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.71, April 29th, 2021
+    Version 2.8, May 19th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -298,10 +298,14 @@
             Removed obsolete code for MFA module presence check
             Updated AzureADAuthorizationEndpointUri for Common/GCC
     2.71    Revised module updating using Install-Package when available
+    2.80    Improved version handling to properly evaluate Preview modules
+            Fixed updating module using install-package when existing package comes from different repo
+            Versions reported are now showing their textual representation, including tags like PreviewX
+            Report-Office365Modules output is now more condense
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.71'
+$local:ScriptVersion= '2.80'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -735,8 +739,8 @@ Function global:Update-Office365Modules {
                         }
                         $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
                         If( $OnlineModule) {
-                            Write-Host (' - Local:{0} Online:{1}' -f $local:Version, $OnlineModule.version)
-                            If( [System.Version]($local:Version -replace '[^\d\.]','') -lt [System.Version]($OnlineModule.version -replace '[^\d\.]','')) {
+                            Write-Host (': Local:{0}, Online:{1}' -f $local:Version, $OnlineModule.version)
+                            If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $OnlineModule.version) -eq 1) {
                                 $local:NewerAvailable= $true
                             }
                             Else {
@@ -765,7 +769,7 @@ Function global:Update-Office365Modules {
                                     If( ( Get-Command -name Install-Package).Parameters['SkipPublisherCheck']) {
                                         $Parm.SkipPublisherCheck= $True
                                     }
-                                    Install-Package -Name $local:Item[3] @Parm | Out-Null
+                                    Install-Package -Name $local:Item[3] -Source $local:Repo @Parm | Out-Null
                                 }
                                 Else{
                                     Update-Module -Name $local:Item[3] @Parm
@@ -822,17 +826,57 @@ Function global:Update-Office365Modules {
     }
 }
 
-Function global:ConvertTo-SystemVersion {
+# Compare-TextVersionNumber to handle (rich) version comparison, similar to [System.Version]'s CompareTo method
+# 1=CompareTo is newer, 0 = Equal, -1 = Version is Newer
+Function global:Compare-TextVersionNumber {
     param(
-        [string]$Text
+        [string]$Version,
+        [string]$CompareTo
     )
-    If( [string]::IsNullOrEmpty( $Text)) {
-        [System.Version]'0.0'
+    $res= 0
+    $null= $Version -match '^(?<version>[\d\.]+)(\-)?([a-zA-Z]*(?<preview>[\d]*))?$'
+    $VersionVer= [System.Version]($matches.Version)
+    If( $matches.Preview) {
+        # Suffix .0 to satisfy SystemVersion as '#' won't initialize
+        $VersionPreviewVer= [System.Version]('{0}.0' -f $matches.Preview)
     }
     Else {
-        $local:StrippedPreview= $Text -replace 'Preview[\d]*', ''
-        [System.Version]($local:StrippedPreview -replace '[^\d\.]','')
+        $VersionPreviewVer= [System.Version]'99999.99999'
     }
+    $null= $CompareTo -match '^(?<version>[\d\.]+)(\-)?([a-zA-Z]*(?<preview>[\d]*))?$'
+    $CompareToVer= [System.Version]($matches.Version)
+    If( $matches.Preview) {
+        $CompareToPreviewVer= [System.Version]('{0}.0' -f $matches.Preview)
+    }
+    Else {
+        $CompareToPreviewVer= [System.Version]'99999.99999'
+    }
+    
+    If( $VersionVer -gt $CompareToVer) {
+        $res= -1
+    }
+    Else {
+        If( $VersionVer -lt $CompareToVer) {
+            $res= 1
+        }
+        Else {
+            # Equal - Check Preview Tag
+            If( $VersionPreviewVer -gt $CompareToPreviewVer) {
+                $res= -1
+            }
+            Else {
+                If( $VersionPreviewVer -lt $CompareToPreviewVer) {
+                    $res= 1
+                }
+                Else {
+                    # Really Equal
+                    $res= 0
+                }
+            }
+        
+        }
+    }
+    $res
 }
 
 Function global:Report-Office365Modules {
@@ -875,23 +919,25 @@ Function global:Report-Office365Modules {
 
             $local:Version = ($local:Module).Version
 
-            Write-Host ('Module: {0} - Checked: v{1}, Online: ' -f $local:Item[4], $local:Version) -NoNewLine
+            Write-Host ('Module {0}: Local v{1}' -f $local:Item[4], $Local:Version) -NoNewline
+   
             $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
             If( $OnlineModule) {
-                Write-Host ('v{0}' -f (ConvertTo-SystemVersion -Text $OnlineModule.version)) -NoNewLine
+                Write-Host (', Online v{0} - Status: ' -f $OnlineModule.version) -NoNewline
             }
             Else {
-                Write-Host ('N/A') -NoNewLine
+                Write-Host (', Online N/A - Status: ') -NoNewline
             }
+
             If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
-                Write-Host (' Unknown') -ForegroundColor Yellow
+                Write-Host ('Unknown')
             }
             Else {
-                If( (ConvertTo-SystemVersion -Text $local:Version) -ige (ConvertTo-SystemVersion -Text $OnlineModule.version)) {
-                    Write-Host (' OK') -ForegroundColor Green
+                If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $OnlineModule.version) -eq 1) {
+                    Write-Host ('Outdated') -ForegroundColor Red
                 }
                 Else {
-                    Write-Host (' Outdated') -ForegroundColor RED
+                    Write-Host ('OK') -ForegroundColor Green
                 }
             }
         }
