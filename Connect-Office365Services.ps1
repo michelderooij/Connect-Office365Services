@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.8, May 19th, 2021
+    Version 2.9, July 29th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -302,10 +302,13 @@
             Fixed updating module using install-package when existing package comes from different repo
             Versions reported are now showing their textual representation, including tags like PreviewX
             Report-Office365Modules output is now more condense
+    2.90    Added MSCommerce module
+            Added MicrosoftPowerBIMgmt module
+            Added Az module
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.80'
+$local:ScriptVersion= '2.90'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -365,6 +368,9 @@ function global:Get-Office365ModuleInfo {
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune',
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph',
+        'Connect|MSCommerce|Connect-MSCommerce|MSCommerce|MSCommerce|https://www.powershellgallery.com/packages/MSCommerce',
+        'Connect|MicrosoftPowerBIMgmt|Connect-PowerBIServiceAccount|MicrosoftPowerBIMgmt|MicrosoftPowerBIMgmt|https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt',
+        'Connect|Az|Connect-AzAccount|Az|Az|https://www.powershellgallery.com/packages/Az',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
         'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
