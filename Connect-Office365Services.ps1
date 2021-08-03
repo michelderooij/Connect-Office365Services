@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.9, July 29th, 2021
+    Version 2.92, August 3rd, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -33,20 +33,20 @@
 
     Helper Functions:
     =================
-    - Connect-AzureActiveDirectory	Connects to Azure Active Directory
-    - Connect-AzureRMS           	Connects to Azure Rights Management
-    - Connect-ExchangeOnline     	Connects to Exchange Online (Graph module)
-    - Connect-SkypeOnline        	Connects to Skype for Business Online
-    - Connect-EOP                	Connects to Exchange Online Protection
-    - Connect-ComplianceCenter   	Connects to Compliance Center
-    - Connect-SharePointOnline   	Connects to SharePoint Online
+    - Connect-AzureActiveDirectory  Connects to Azure Active Directory
+    - Connect-AzureRMS              Connects to Azure Rights Management
+    - Connect-ExchangeOnline        Connects to Exchange Online (Graph module)
+    - Connect-SkypeOnline           Connects to Skype for Business Online
+    - Connect-EOP                   Connects to Exchange Online Protection
+    - Connect-ComplianceCenter      Connects to Compliance Center
+    - Connect-SharePointOnline      Connects to SharePoint Online
     - Connect-MSTeams               Connects to Microsoft Teams
-    - Get-Office365Credentials    	Gets Office 365 credentials
-    - Connect-ExchangeOnPremises 	Connects to Exchange On-Premises
-    - Get-OnPremisesCredentials    	Gets On-Premises credentials
+    - Get-Office365Credentials      Gets Office 365 credentials
+    - Connect-ExchangeOnPremises    Connects to Exchange On-Premises
+    - Get-OnPremisesCredentials     Gets On-Premises credentials
     - Get-ExchangeOnPremisesFQDN    Gets FQDN for Exchange On-Premises
-    - Get-Office365Tenant		    Gets Office 365 tenant name
-    - Set-Office365Environment		Configures Uri's and region to use
+    - Get-Office365Tenant           Gets Office 365 tenant name
+    - Set-Office365Environment	    Configures Uri's and region to use
     - Update-Office365Modules       Updates supported Office 365 modules
     - Report-Office365Modules       Report on known vs online module versions
 
@@ -305,10 +305,12 @@
     2.90    Added MSCommerce module
             Added MicrosoftPowerBIMgmt module
             Added Az module
+    2.91    Removed Microsoft.Graph.Teams.Team module (unlisted at PSGallery)
+            
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.90'
+$local:ScriptVersion= '2.91'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -362,7 +364,6 @@ function global:Get-Office365ModuleInfo {
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (GA)|https://www.powershellgallery.com/packages/MicrosoftTeams',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams (Test)|https://www.poshtestgallery.com/packages/MicrosoftTeams',
         'Connect|Microsoft Commerce|Connect-MSCommerce|MSCommerce|Microsoft Commerce|https://www.powershellgallery.com/packages/MSCommerce',
-        'Connect|Microsoft.Graph.Teams|Connect-Graph|Microsoft.Graph.Teams.Team|Microsoft.Graph.Teams.Team|https://www.powershellgallery.com/packages/Microsoft.Graph.Teams.Team',
         'Connect|PnP.PowerShell|Connect-PnPOnline|PnP.PowerShell|PnP.PowerShell|https://www.powershellgallery.com/packages/PnP.PowerShell',
         'Connect|PowerApps-Admin-PowerShell|Connect-PowerApps|Microsoft.PowerApps.Administration.PowerShell|PowerApps-Admin-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell',
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell',
