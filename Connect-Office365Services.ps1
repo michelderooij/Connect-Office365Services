@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.92, August 3rd, 2021
+    Version 2.91, August 3rd, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
