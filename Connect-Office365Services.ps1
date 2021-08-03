@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.91, August 3rd, 2021
+    Version 2.93, August 3rd, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -54,7 +54,7 @@
 
     To register the PowerShell Test Gallery and install modules from there, use:
     Register-PSRepository -Name PSGalleryInt -SourceLocation https://www.poshtestgallery.com/ -InstallationPolicy Trusted
-    Install-Module -Name MicrosoftTeams -Repository PSGalleryInt -Force
+    Install-Module -Name MicrosoftTeams -Repository PSGalleryInt -Force -Scope AllUsers
 
     To load the helper functions from your PowerShell profile, put Connect-Office365Services.ps1 in the same location
     as your $profile file, and edit $profile as follows:
@@ -306,11 +306,14 @@
             Added MicrosoftPowerBIMgmt module
             Added Az module
     2.91    Removed Microsoft.Graph.Teams.Team module (unlisted at PSGallery)
-            
+    2.92    Removed duplicate MSCommerce checking
+    2.93    Added cleaning up of module dependencies (e.g. Az)
+            Updating will use same scope of installed module
+            Showing warning during update when running multiple PowerShell sessions
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.91'
+$local:ScriptVersion= '2.93'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -369,7 +372,6 @@ function global:Get-Office365ModuleInfo {
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune',
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph',
-        'Connect|MSCommerce|Connect-MSCommerce|MSCommerce|MSCommerce|https://www.powershellgallery.com/packages/MSCommerce',
         'Connect|MicrosoftPowerBIMgmt|Connect-PowerBIServiceAccount|MicrosoftPowerBIMgmt|MicrosoftPowerBIMgmt|https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt',
         'Connect|Az|Connect-AzAccount|Az|Az|https://www.powershellgallery.com/packages/Az',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
@@ -700,6 +702,18 @@ Function global:Get-Office365Tenant {
     $global:myOffice365Services['Office365Tenant'] = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
 }
 
+Function global:Get-ModuleScope {
+    param(
+        $Module
+    )
+    If( $Module.Path -ilike ('{0}*' -f $ENV:HOME)) { 
+        'CurrentUser' 
+    } 
+    Else { 
+        'AllUsers' 
+    }
+}
+
 Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
@@ -711,6 +725,9 @@ Function global:Update-Office365Modules {
     }
     $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     If( $local:IsAdmin) {
+        If( (Get-Process -Name powershell, pwsh -ErrorAction SilentlyContinue | Measure-Object).Count -gt 1) {
+            Write-Warning ('Running multiple PowerShell sessions, successful updating might be problematic.') 
+        }
         ForEach ( $local:Function in $local:Functions) {
             $local:Item = ($local:Function).split('|')
             If( $local:Item[3]) {
@@ -767,6 +784,7 @@ Function global:Update-Office365Modules {
                                     AllowPrerelease= $global:myOffice365Services['AllowPrerelease']
                                     Force= $True
                                     Confirm= $False
+                                    Scope= Get-ModuleScope -Module $local:Module
                                 }
                                 # Pass AcceptLicense if current version of UpdateModule supports it
                                 If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
@@ -793,6 +811,28 @@ Function global:Update-Office365Modules {
                                 $local:Module = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                                 $local:LatestVersion = ($local:Module).Version
                                 Write-Host ('Updated {0} to version {1}' -f $local:Item[4], $local:LatestVersion) -ForegroundColor Green
+
+                                # Uninstall all old versions of dependencies
+                                If( $OnlineModule) {
+                                    ForEach( $DependencyModule in $OnlineModule.Dependencies) {
+
+                                        # Unload
+                                        Remove-Module -Name $DependencyModule.Name -Force -Confirm:$False -ErrorAction SilentlyContinue
+  
+                                        $local:DepModuleVersions= Get-InstalledModule -Name $DependencyModule.Name -AllVersions
+                                        $local:DepModule = $local:DepModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
+                                        $local:OldDepModules= $local:DepModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
+                                        ForEach( $DepModule in $local:OldDepModules) {
+                                            Write-Host ('Uninstalling dependency module {0} version {1}' -f $DepModule.Name, $DepModule.Version)
+                                            Try {
+                                                $DepModule | Uninstall-Module -Confirm:$false -Force
+                                            }
+                                            Catch {
+                                                Write-Error ('Problem uninstalling module {0} version {1}' -f $DepModule.Name, $DepModule.Version) 
+                                            }
+                                        }
+                                    }
+                                }
 
                                 # Uninstall all old versions of the module
                                 $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
@@ -930,11 +970,12 @@ Function global:Report-Office365Modules {
    
             $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
             If( $OnlineModule) {
-                Write-Host (', Online v{0} - Status: ' -f $OnlineModule.version) -NoNewline
+                Write-Host (', Online v{0}' -f $OnlineModule.version) -NoNewline
             }
             Else {
-                Write-Host (', Online N/A - Status: ') -NoNewline
+                Write-Host (', Online N/A') -NoNewline
             }
+            Write-Host (', Scope:{0} Status:' -f (Get-ModuleScope -Module $local:Module)) -NoNewline
 
             If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
                 Write-Host ('Unknown')
