@@ -821,8 +821,7 @@ Function global:Update-Office365Modules {
   
                                         $local:DepModuleVersions= Get-InstalledModule -Name $DependencyModule.Name -AllVersions
                                         $local:DepModule = $local:DepModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
-                                        $local:DepLatestVersion = ($local:DepModule).Version
-                                        $local:OldDepModules= $local:DepModuleVersions | Where-Object {$_.Version -ne $local:DepLatestVersion}
+                                        $local:OldDepModules= $local:DepModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
                                         ForEach( $DepModule in $local:OldDepModules) {
                                             Write-Host ('Uninstalling dependency module {0} version {1}' -f $DepModule.Name, $DepModule.Version)
                                             Try {
