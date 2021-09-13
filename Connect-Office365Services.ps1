@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.93, August 3rd, 2021
+    Version 2.94, September 13th, 2021
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -310,10 +310,11 @@
     2.93    Added cleaning up of module dependencies (e.g. Az)
             Updating will use same scope of installed module
             Showing warning during update when running multiple PowerShell sessions
+    2.94    Added AllowClubber to ignore existing cmdlet conflicts when updating modules
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.93'
+$local:ScriptVersion= '2.94'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -785,6 +786,7 @@ Function global:Update-Office365Modules {
                                     Force= $True
                                     Confirm= $False
                                     Scope= Get-ModuleScope -Module $local:Module
+                                    AllowClobber= $True
                                 }
                                 # Pass AcceptLicense if current version of UpdateModule supports it
                                 If( ( Get-Command -name Update-Module).Parameters['AcceptLicense']) {
@@ -821,7 +823,8 @@ Function global:Update-Office365Modules {
   
                                         $local:DepModuleVersions= Get-InstalledModule -Name $DependencyModule.Name -AllVersions
                                         $local:DepModule = $local:DepModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
-                                        $local:OldDepModules= $local:DepModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
+                                        $local:DepLatestVersion = ($local:DepModule).Version
+                                        $local:OldDepModules= $local:DepModuleVersions | Where-Object {$_.Version -ne $local:DepLatestVersion}
                                         ForEach( $DepModule in $local:OldDepModules) {
                                             Write-Host ('Uninstalling dependency module {0} version {1}' -f $DepModule.Name, $DepModule.Version)
                                             Try {
