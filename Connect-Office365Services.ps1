@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.94, September 13th, 2021
+    Version 2.95, January 3rd, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -311,10 +311,11 @@
             Updating will use same scope of installed module
             Showing warning during update when running multiple PowerShell sessions
     2.94    Added AllowClubber to ignore existing cmdlet conflicts when updating modules
+    2.95    Added UseRPSSession switch for Connect-ExchangeOnline
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.94'
+$local:ScriptVersion= '2.95'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -481,8 +482,9 @@ function global:Connect-ExchangeOnline {
         [uint32]$PageSize,
         [switch]$Device,
         [switch]$InlineCredential,
-        [string[]]$CommandName,
-        [string[]]$FormatTypeName
+        [string[]]$CommandName = @("*"),
+        [string[]]$FormatTypeName = @("*"),
+        [switch]$UseRPSSession = $false
     )
     if (!( $PSBoundParameters.ContainsKey('ConnectionUri'))) {
         $PSBoundParameters['ConnectionUri']= $global:myOffice365Services['ConnectionEndpointUri']
