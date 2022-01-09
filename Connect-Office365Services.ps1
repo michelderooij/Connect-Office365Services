@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.95, January 3rd, 2022
+    Version 2.96, January 9th, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -312,10 +312,12 @@
             Showing warning during update when running multiple PowerShell sessions
     2.94    Added AllowClubber to ignore existing cmdlet conflicts when updating modules
     2.95    Added UseRPSSession switch for Connect-ExchangeOnline
+    2.96    Added Microsoft36DSC module
+            Fixed determing current module scope (CurrentUser/AllUsers)
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.95'
+$local:ScriptVersion= '2.96'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -376,6 +378,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph',
         'Connect|MicrosoftPowerBIMgmt|Connect-PowerBIServiceAccount|MicrosoftPowerBIMgmt|MicrosoftPowerBIMgmt|https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt',
         'Connect|Az|Connect-AzAccount|Az|Az|https://www.powershellgallery.com/packages/Az',
+        'Connect|Microsoft36DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
         'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
@@ -709,7 +712,7 @@ Function global:Get-ModuleScope {
     param(
         $Module
     )
-    If( $Module.Path -ilike ('{0}*' -f $ENV:HOME)) { 
+    If( $Module.ModuleBase -ilike ('{0}*' -f (Join-Path -Path $ENV:HOMEDRIVE -ChildPath $ENV:HOMEPATH))) { 
         'CurrentUser' 
     } 
     Else { 
