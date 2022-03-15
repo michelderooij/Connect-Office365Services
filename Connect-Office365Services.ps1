@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.97, March 15th, 2022
+    Version 2.99, March 15th, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -38,6 +38,8 @@
     - Connect-ExchangeOnline        Connects to Exchange Online (Graph module)
     - Connect-SkypeOnline           Connects to Skype for Business Online
     - Connect-EOP                   Connects to Exchange Online Protection
+    - Connect-AIP                   Connects to Azure Information Protection
+    - Connect-PowerApps             Connects to PowerApps
     - Connect-ComplianceCenter      Connects to Compliance Center
     - Connect-SharePointOnline      Connects to SharePoint Online
     - Connect-MSTeams               Connects to Microsoft Teams
@@ -315,10 +317,12 @@
     2.96    Added Microsoft36DSC module
             Fixed determing current module scope (CurrentUser/AllUsers)
     2.97    Fixed title for admin roles
+    2.98    Fixed ConnectionUri in EXO connection method
+    2.99    Added 2 connect helper functions to description
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.97'
+$local:ScriptVersion= '2.99'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -579,8 +583,6 @@ function global:Connect-MSTeams {
         Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
         Connect-MicrosoftTeams -Credential $global:myOffice365Services['Office365Credentials']
     }
-
-    
 }
 
 function global:Connect-SkypeOnline {
