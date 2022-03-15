@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.96, January 9th, 2022
+    Version 2.97, March 15th, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -314,16 +314,17 @@
     2.95    Added UseRPSSession switch for Connect-ExchangeOnline
     2.96    Added Microsoft36DSC module
             Fixed determing current module scope (CurrentUser/AllUsers)
+    2.97    Fixed title for admin roles
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.96'
+$local:ScriptVersion= '2.97'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
         $local:PromptPrefix= ''
         $ThisPrincipal= new-object System.Security.principal.windowsprincipal( [System.Security.Principal.WindowsIdentity]::GetCurrent())
-        if( $ThisPrincipal.IsInRole( 'Administrators')) { 
+        if( $ThisPrincipal.IsInRole( [Security.Principal.WindowsBuiltInRole]::Administrator)) { 
 	    $local:PromptPrefix= 'Administrator:'
         }
         $local:Title= '{0}{1} connected to Tenant ID {2}' -f $local:PromptPrefix, $myOffice365Services['Office365Credentials'].UserName, $global:myOffice365Services['TenantID']
