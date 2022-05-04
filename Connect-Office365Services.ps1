@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 2.99, March 15th, 2022
+    Version 3.00, May 4th, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -63,9 +63,9 @@
     & (Join-Path $PSScriptRoot "Connect-Office365Services.ps1")
 
     .HISTORY
-    1.2	    Community release
+    1.2     Community release
     1.3     Updated required version of Online Sign-In Assistant
-    1.4	    Added (in-code) AzureEnvironment (Connect-AzureAD)
+    1.4     Added (in-code) AzureEnvironment (Connect-AzureAD)
             Added version reporting for modules
     1.5     Added support for Exchange Online PowerShell module w/MFA
             Added IE proxy config support
@@ -319,10 +319,16 @@
     2.97    Fixed title for admin roles
     2.98    Fixed ConnectionUri in EXO connection method
     2.99    Added 2 connect helper functions to description
+    3.00    Fixed wrongly detecting old modules because mixed native PS module and PSGet cmdlets
+            Back to using native PS module management cmdlets
+            Some cosmetics
+            Startup only reports installed modules, not "not installed"
+            Report now also reports not installed modules
+            Removed PSGet check 
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '2.99'
+$local:ScriptVersion= '3.00'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -383,7 +389,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|Microsoft.Graph|Connect-Graph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph',
         'Connect|MicrosoftPowerBIMgmt|Connect-PowerBIServiceAccount|MicrosoftPowerBIMgmt|MicrosoftPowerBIMgmt|https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt',
         'Connect|Az|Connect-AzAccount|Az|Az|https://www.powershellgallery.com/packages/Az',
-        'Connect|Microsoft36DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
+        'Connect|Microsoft365DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
         'Settings|On-Premises Credentials|Get-OnPremisesCredentials',
@@ -726,12 +732,7 @@ Function global:Get-ModuleScope {
 Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
-    If( $PSVersionTable.PSVersion.Major -eq 7) {
-        $local:AvailableModules= Get-Module -ListAvailable | Sort-Object -Unique -Property Name
-    }
-    Else {
-        $local:AvailableModules= Get-InstalledModule
-    }
+
     $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     If( $local:IsAdmin) {
         If( (Get-Process -Name powershell, pwsh -ErrorAction SilentlyContinue | Measure-Object).Count -gt 1) {
@@ -740,14 +741,17 @@ Function global:Update-Office365Modules {
         ForEach ( $local:Function in $local:Functions) {
             $local:Item = ($local:Function).split('|')
             If( $local:Item[3]) {
+
+                $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending 
+
                 $local:CheckThisModule= $false
-                If( ([System.Uri](Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Select-Object -First 1).RepositorySourceLocation).Authority -eq (([System.Uri]$local:Item[5])).Authority) {
+
+                If( ([System.Uri]($local:Module | Select-Object -First 1).RepositorySourceLocation).Authority -eq (([System.Uri]$local:Item[5])).Authority) {
                     $local:CheckThisModule= $true
                 }
 
                 If( $local:CheckThisModule) {
 
-                    $local:Module = $local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending | Select-Object -First 1
                     If( $local:Item[5]) {
                        $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
                     }
@@ -817,7 +821,13 @@ Function global:Update-Office365Modules {
 
                             If( $local:UpdateSuccess) {
 
-                                $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
+                                If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
+                                    $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
+                                }
+                                Else {
+                                    $local:ModuleVersions= Get-Module -Name $local:Item[3] -ListAvailable -All
+                                }
+
                                 $local:Module = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                                 $local:LatestVersion = ($local:Module).Version
                                 Write-Host ('Updated {0} to version {1}' -f $local:Item[4], $local:LatestVersion) -ForegroundColor Green
@@ -828,8 +838,8 @@ Function global:Update-Office365Modules {
 
                                         # Unload
                                         Remove-Module -Name $DependencyModule.Name -Force -Confirm:$False -ErrorAction SilentlyContinue
-  
-                                        $local:DepModuleVersions= Get-InstalledModule -Name $DependencyModule.Name -AllVersions
+
+                                        $local:DepModuleVersions= Get-Module -Name $DependencyModule.Name -ListAvailable
                                         $local:DepModule = $local:DepModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                                         $local:DepLatestVersion = ($local:DepModule).Version
                                         $local:OldDepModules= $local:DepModuleVersions | Where-Object {$_.Version -ne $local:DepLatestVersion}
@@ -873,7 +883,7 @@ Function global:Update-Office365Modules {
 
                     }
                     Else {
-                        Write-Host ('Skipping {0}: Not installed using Install-Module' -f $local:Item[4]) -ForegroundColor Yellow
+                        Write-Host ('Skipping {0}: Not installed using PowerShellGet/Install-Module' -f $local:Item[4]) -ForegroundColor Yellow
                     }
                 }
             }
@@ -943,61 +953,60 @@ Function global:Report-Office365Modules {
 
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
-    If( $PSVersionTable.PSVersion.Major -eq 7) {
-        $local:AvailableModules= Get-Module -ListAvailable | Sort-Object -Unique -Property Name
-    }
-    Else {
-        $local:AvailableModules= Get-InstalledModule
-    }
 
     ForEach ( $local:Function in $local:Functions) {
 
         $local:Item = ($local:Function).split('|')
+        If( $local:Item[3]) {
+            $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending
 
-        # Use specific or default repository
-        If( $local:Item[5]) {
-            $local:Repo= $local:Repos | Where-Object {([System.Uri]($_.SourceLocation)).Authority -eq (([System.Uri]$local:Item[5])).Authority}
-        }
-        If( [string]::IsNullOrEmpty( $local:Repo )) { 
-            $local:Repo = 'PSGallery'
-        }
-        Else {
-            $local:Repo= ($local:Repo).Name
-        }
+            # Use specific or default repository
+            If( $local:Item[5]) {
+                $local:Repo= $local:Repos | Where-Object {([System.Uri]($_.SourceLocation)).Authority -eq (([System.Uri]$local:Item[5])).Authority}
+            }
+            If( [string]::IsNullOrEmpty( $local:Repo )) { 
+                $local:Repo = 'PSGallery'
+            }
+            Else {
+                $local:Repo= ($local:Repo).Name
+            }
 
-        $local:Module = $local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] } | Sort-Object -Property Version -Descending
-        If( $local:Item[5]) {
-            $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
-        }
-        Else {
-            $local:Module= $local:Module | Select-Object -First 1
-        }
+            If( $local:Item[5]) {
+                $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+            }
+            Else {
+                $local:Module= $local:Module | Select-Object -First 1
+            }
 
-        If( $local:Module) {
+            If( $local:Module) {
 
-            $local:Version = ($local:Module).Version
+                $local:Version = ($local:Module).Version
 
-            Write-Host ('Module {0}: Local v{1}' -f $local:Item[4], $Local:Version) -NoNewline
+                Write-Host ('Module {0}: Local v{1}' -f $local:Item[4], $Local:Version) -NoNewline
    
-            $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
-            If( $OnlineModule) {
-                Write-Host (', Online v{0}' -f $OnlineModule.version) -NoNewline
-            }
-            Else {
-                Write-Host (', Online N/A') -NoNewline
-            }
-            Write-Host (', Scope:{0} Status:' -f (Get-ModuleScope -Module $local:Module)) -NoNewline
-
-            If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
-                Write-Host ('Unknown')
-            }
-            Else {
-                If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $OnlineModule.version) -eq 1) {
-                    Write-Host ('Outdated') -ForegroundColor Red
+                $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
+                If( $OnlineModule) {
+                    Write-Host (', Online v{0}' -f $OnlineModule.version) -NoNewline
                 }
                 Else {
-                    Write-Host ('OK') -ForegroundColor Green
+                    Write-Host (', Online N/A') -NoNewline
                 }
+                Write-Host (', Scope:{0} Status:' -f (Get-ModuleScope -Module $local:Module)) -NoNewline
+
+                If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
+                    Write-Host ('Unknown')
+                }
+                Else {
+                    If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $OnlineModule.version) -eq 1) {
+                        Write-Host ('Outdated') -ForegroundColor Red
+                    }
+                    Else {
+                        Write-Host ('OK') -ForegroundColor Green
+                    }
+                }
+            }
+            Else {
+                Write-Host ('{0} module not found ({1})' -f $local:Item[4], $local:Item[5])
             }
         }
     }
@@ -1014,19 +1023,21 @@ function global:Connect-Office365 {
     Connect-SharePointOnline
 }
 
-If(!( Get-Command Get-InstalledModule -ErrorAction SilentlyContinue)) {
-    Write-Warning ('Get-InstalledModule not available, please install PowerShellGet first')
-    Write-Warning ('See https://docs.microsoft.com/en-us/powershell/scripting/gallery/installing-psget')
-    Exit -1
-}
-
-$PSGetModule= Get-Module PowerShellGet
+$PSGetModule= Get-Module -Name PowerShellGet -ErrorAction SilentlyContinue
 If(! $PSGetModule) {
     Write-Warning ('PowerShellGet Module not found')
+    $PSGetVer= 'N/A'
 }
-$PackageManagementModule= Get-Module PackageManagement 
+Else {
+    $PSGetVer= $PSGetModule.Version
+}
+$PackageManagementModule= Get-Module -Name PackageManagement -ErrorAction SilentlyContinue
 If(! $PackageManagementModule) {
     Write-Warning ('PackageManagement Module not found')
+    $PMMVer= 'N/A'
+}
+Else {
+    $PMMVer= $PackageManagementModule.Version
 }
 
 Write-Host ('*' * 78)
@@ -1048,62 +1059,58 @@ $global:myOffice365Services['SessionExchangeOptions'] = New-PSSessionOption -Pro
 Set-Office365Environment -AzureEnvironment 'Default'
 
 Write-Host ('Environment:{0}, Administrator:{1}' -f $global:myOffice365Services['AzureEnvironment'], $local:IsAdmin)
-Write-Host ('Architecture:{0}, PS:{1}, PSGet:{2}, PackageManagement:{3}' -f ($ENV:PROCESSOR_ARCHITECTURE), ($PSVersionTable).PSVersion, $PSGetModule.Version, $PackageManagementModule.Version )
+Write-Host ('Architecture:{0}, PS:{1}, PSGet:{2}, PackageManagement:{3}' -f ($ENV:PROCESSOR_ARCHITECTURE), ($PSVersionTable).PSVersion, $PSGetVer, $PMMVer )
 Write-Host ('*' * 78)
 
 $local:Functions= Get-Office365ModuleInfo
 $local:Repos= Get-PSRepository
 
 Write-Host ('Collecting Module information ..')
-If( $PSVersionTable.PSVersion.Major -eq 7) {
-    $local:AvailableModules= Get-Module -ListAvailable | Sort-Object -Unique -Property Name
-}
-Else {
-    $local:AvailableModules= Get-InstalledModule
-}
 
-
-If( $local:AvailableModules | Where-Object {$_.Name -eq 'SkypeOnlineConnector'}) {
-    Write-Warning 'Notice: The Skype for Business Online Connector PowerShell module functionality has moved to the Microsoft Teams module.  retires February 15th, 2021.'
+If( Get-Module -Name 'SkypeOnlineConnector' -ListAvailable) {
+    Write-Warning 'Notice: The Skype for Business Online Connector PowerShell module functionality has moved to the Microsoft Teams module. Module retired February 15th, 2021.'
 }
-If( $local:AvailableModules | Where-Object {$_.Name -eq 'Microsoft.Exchange.Management.ExoPowershellModule'}) {
+If( Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule' -ListAvailable) {
     Write-Warning 'Notice: The Exchange Online PowerShell module has been replaced by the Exchange Online Management module.'
 }
 
 ForEach ( $local:Function in $local:Functions) {
 
     $local:Item = ($local:Function).split('|')
-    $local:ModuleMatch= ([System.Uri]($local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] }).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
+    If( $local:Item[3]) {
+        $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending
+        $local:ModuleMatch= ([System.Uri]($local:Module | Select-Object -First 1).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
 
-    If( $local:ModuleMatch) {
-        If ( $local:CreateISEMenu) {
-            $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
-            If ( !( $local:MenuObj)) {
-                Try {$local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus.Add( $local:Item[0], $null, $null)}
-                Catch {Write-Warning -Message $_}
+        If( $local:ModuleMatch) {
+            If ( $local:CreateISEMenu) {
+                $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
+                If ( !( $local:MenuObj)) {
+                    Try {$local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus.Add( $local:Item[0], $null, $null)}
+                    Catch {Write-Warning -Message $_}
+                }
+                Try {
+                    $local:RemoveItems = $local:MenuObj.Submenus |  Where-Object -FilterScript { $_.DisplayName -eq $local:Item[1] -or $_.Action -eq $local:Item[2] }
+                    $null = $local:RemoveItems | ForEach-Object -Process { $local:MenuObj.Submenus.Remove( $_) }
+                    $null = $local:MenuObj.SubMenus.Add( $local:Item[1], [ScriptBlock]::Create( $local:Item[2]), $null)
+                }
+                Catch {
+                    Write-Warning -Message $_
+                }
             }
-            Try {
-                $local:RemoveItems = $local:MenuObj.Submenus |  Where-Object -FilterScript { $_.DisplayName -eq $local:Item[1] -or $_.Action -eq $local:Item[2] }
-                $null = $local:RemoveItems | ForEach-Object -Process { $local:MenuObj.Submenus.Remove( $_) }
-                $null = $local:MenuObj.SubMenus.Add( $local:Item[1], [ScriptBlock]::Create( $local:Item[2]), $null)
-            }
-            Catch {
-                Write-Warning -Message $_
+            If ( $local:Item[3]) {
+                $local:Module = $local:Module | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
+                If( $local:Item[5]) {
+                    $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
+                }
+                Else {
+                    $local:Module= $local:Module | Select-Object -First 1
+                }
+                $local:Version = ($local:Module).Version
+                Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
             }
         }
-        If ( $local:Item[3]) {
-            $local:Module = $local:AvailableModules | Where-Object {$_.Name -ieq $local:Item[3] } | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
-            If( $local:Item[5]) {
-                $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
-            }
-            Else {
-                $local:Module= $local:Module | Select-Object -First 1
-            }
-            $local:Version = ($local:Module).Version
-            Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
+        Else {
+            # Module not found
         }
-    }
-    Else {
-        Write-Host ('{0} module not found ({1})' -f $local:Item[4], $local:Item[5])
     }
 }
