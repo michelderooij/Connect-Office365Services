@@ -1023,14 +1023,14 @@ function global:Connect-Office365 {
     Connect-SharePointOnline
 }
 
-$PSGetModule= Get-Module -Name PowerShellGet -ErrorAction SilentlyContinue
+$PSGetModule= Get-Module -Name PowerShellGet -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version -Descending | Select-Object -First 1
 If(! $PSGetModule) {
     $PSGetVer= 'N/A'
 }
 Else {
     $PSGetVer= $PSGetModule.Version
 }
-$PackageManagementModule= Get-Module -Name PackageManagement -ErrorAction SilentlyContinue
+$PackageManagementModule= Get-Module -Name PackageManagement -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version -Descending | Select-Object -First 1
 If(! $PackageManagementModule) {
     $PMMVer= 'N/A'
 }
