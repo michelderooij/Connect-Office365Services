@@ -1025,7 +1025,6 @@ function global:Connect-Office365 {
 
 $PSGetModule= Get-Module -Name PowerShellGet -ErrorAction SilentlyContinue
 If(! $PSGetModule) {
-    Write-Warning ('PowerShellGet Module not found')
     $PSGetVer= 'N/A'
 }
 Else {
@@ -1033,7 +1032,6 @@ Else {
 }
 $PackageManagementModule= Get-Module -Name PackageManagement -ErrorAction SilentlyContinue
 If(! $PackageManagementModule) {
-    Write-Warning ('PackageManagement Module not found')
     $PMMVer= 'N/A'
 }
 Else {
