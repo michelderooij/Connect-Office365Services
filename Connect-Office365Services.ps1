@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.00, May 4th, 2022
+    Version 3.01, May 21st, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -325,10 +325,11 @@
             Startup only reports installed modules, not "not installed"
             Report now also reports not installed modules
             Removed PSGet check 
+    3.01    Added Preview info when reporting local module info
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.00'
+$local:ScriptVersion= '3.01'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -729,6 +730,35 @@ Function global:Get-ModuleScope {
     }
 }
 
+function global:Get-ModuleVersionInfo {
+    param( 
+        $Module
+    )
+    $ModuleManifestPath = $Module.Path
+    $isModuleManifestPathValid = Test-Path -Path $ModuleManifestPath
+    If(!( $isModuleManifestPathValid)) {
+        # Module manifest path invalid, skipping extracting prerelease info
+        $ModuleVersion= $Module.Version.ToString()
+    }
+    Else {
+        $ModuleManifestContent = Get-Content -Path $ModuleManifestPath
+        $preReleaseInfo = $ModuleManifestContent -match "Prerelease = '(.*)'"
+        If( $preReleaseInfo) {
+            $preReleaseVersion= $preReleaseInfo[0].Split('=')[1].Trim().Trim("'")
+            If( $preReleaseVersion) {
+                $ModuleVersion= ('{0}-{1}' -f $Module.Version.ToString(), $preReleaseVersion)
+            }
+            Else {
+                $ModuleVersion= $Module.Version.ToString()
+            }
+        }
+        Else {
+            $ModuleVersion= $Module.Version.ToString()
+        }
+    }
+    $ModuleVersion
+}
+
 Function global:Update-Office365Modules {
     Get-AllowPrereleaseModule
     $local:Functions= Get-Office365ModuleInfo
@@ -761,7 +791,7 @@ Function global:Update-Office365Modules {
 
                     If( ($local:Module).RepositorySourceLocation) {
 
-                        $local:Version = ($local:Module).Version
+                        $local:Version = Get-ModuleVersionInfo -Module $local:Module
                         Write-Host ('Checking {0}' -f $local:Item[4]) -NoNewLine
 
                         $local:NewerAvailable= $false
@@ -980,7 +1010,7 @@ Function global:Report-Office365Modules {
 
             If( $local:Module) {
 
-                $local:Version = ($local:Module).Version
+                $local:Version = Get-ModuleVersionInfo -Module $local:Module
 
                 Write-Host ('Module {0}: Local v{1}' -f $local:Item[4], $Local:Version) -NoNewline
    
@@ -1103,7 +1133,7 @@ ForEach ( $local:Function in $local:Functions) {
                 Else {
                     $local:Module= $local:Module | Select-Object -First 1
                 }
-                $local:Version = ($local:Module).Version
+                $local:Version = Get-ModuleVersionInfo -Module $local:Module
                 Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
             }
         }
