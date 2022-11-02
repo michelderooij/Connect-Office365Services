@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.10, November 1st, 2022
+    Version 3.11, November 2nd, 2022
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -330,10 +330,11 @@
             Renamed Azure AD v1 to MSOnline to prevent confusion
             Added support for WhiteboardAdmin
             Added support for MSIdentityTools
+    3.11    Fixed header not displaying correction script version
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.01'
+$local:ScriptVersion= '3.11'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
