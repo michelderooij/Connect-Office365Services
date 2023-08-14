@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.11, November 2nd, 2022
+    Version 3.12, August 14th 2023
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -331,10 +331,11 @@
             Added support for WhiteboardAdmin
             Added support for MSIdentityTools
     3.11    Fixed header not displaying correction script version
+    3.12    Replaced 'Prerelease' questions with switch - specify if you want, otherwise default is unspecified (=GA)
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.11'
+$local:ScriptVersion= '3.12'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -702,20 +703,6 @@ Function global:Get-Office365Credentials {
     Set-WindowTitle
 }
 
-Function global:Get-AllowPrereleaseModule {
-    If( $global:myOffice365Services['AllowPrerelease']) {
-        # Already asked
-    }
-    Else {
-        $Answer = Read-host  -Prompt 'Would you like to check for pre-release modules? (y/N) '
-        Switch ($Answer.ToUpper()) {
-            'Y' { $rval = $true }
-            Default { $rval = $false}
-        }
-        $global:myOffice365Services['AllowPrerelease']= $rval
-    }
-}
-
 Function global:Get-OnPremisesCredentials {
     $global:myOffice365Services['OnPremisesCredentials'] = $host.ui.PromptForCredential('On-Premises Credentials', 'Please Enter Your On-Premises Credentials', '', '')
 }
@@ -766,7 +753,10 @@ function global:Get-ModuleVersionInfo {
 }
 
 Function global:Update-Office365Modules {
-    Get-AllowPrereleaseModule
+    param (
+        [switch]$AllowPrerelease
+    )
+
     $local:Functions= Get-Office365ModuleInfo
 
     $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -810,7 +800,7 @@ Function global:Update-Office365Modules {
                         Else {
                             $local:Repo= ($local:Repo).Name
                         }
-                        $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
+                        $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$AllowPrerelease -ErrorAction SilentlyContinue
                         If( $OnlineModule) {
                             Write-Host (': Local:{0}, Online:{1}' -f $local:Version, $OnlineModule.version)
                             If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $OnlineModule.version) -eq 1) {
@@ -830,7 +820,7 @@ Function global:Update-Office365Modules {
                             $local:UpdateSuccess= $false
                             Try {
                                 $Parm= @{
-                                    AllowPrerelease= $global:myOffice365Services['AllowPrerelease']
+                                    AllowPrerelease= $AllowPrerelease
                                     Force= $True
                                     Confirm= $False
                                     Scope= Get-ModuleScope -Module $local:Module
@@ -985,7 +975,9 @@ Function global:Compare-TextVersionNumber {
 
 Function global:Report-Office365Modules {
 
-    Get-AllowPrereleaseModule
+    param(
+        [switch]$AllowPrerelease
+    )
 
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
@@ -1020,7 +1012,7 @@ Function global:Report-Office365Modules {
 
                 Write-Host ('Module {0}: Local v{1}' -f $local:Item[4], $Local:Version) -NoNewline
    
-                $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$global:myOffice365Services['AllowPrerelease'] -ErrorAction SilentlyContinue
+                $OnlineModule = Find-Module -Name $local:Item[3] -Repository $local:Repo -AllowPrerelease:$AllowPrerelease -ErrorAction SilentlyContinue
                 If( $OnlineModule) {
                     Write-Host (', Online v{0}' -f $OnlineModule.version) -NoNewline
                 }
