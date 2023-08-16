@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.14, August 16th 2023
+    Version 3.15, August 16th 2023
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -37,7 +37,6 @@
     - Connect-AzureRMS              Connects to Azure Rights Management
     - Connect-ExchangeOnline        Connects to Exchange Online (Graph module)
     - Connect-SkypeOnline           Connects to Skype for Business Online
-    - Connect-EOP                   Connects to Exchange Online Protection
     - Connect-AIP                   Connects to Azure Information Protection
     - Connect-PowerApps             Connects to PowerApps
     - Connect-ComplianceCenter      Connects to Compliance Center
@@ -334,10 +333,12 @@
     3.12    Replaced 'Prerelease' questions with switch - specify if you want, otherwise default is unspecified (=GA)
     3.13    Added ORCA to set of supported modules
     3.14    Added O365CentralizedAddInDeployment to set of supported modules
+    3.15    Fixed creating ISE menu options for local functions
+            Removed Connect-EOP
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.14'
+$local:ScriptVersion= '3.15'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -381,8 +382,7 @@ function global:Get-Office365ModuleInfo {
     # Menu | Submenu | Menu ScriptBlock | ModuleName | Description | (Repo)Link 
     @(
         'Connect|Exchange Online|Connect-ExchangeOnline|ExchangeOnlineManagement|Exchange Online Management|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
-        'Connect|Exchange Online Protection|Connect-EOP',
-        'Connect|Exchange Compliance Center|Connect-ComplianceCenter',
+        'Connect|Exchange Security & Compliance Center|Connect-ComplianceCenter|ExchangeOnlineManagement|Exchange Online Management|https://www.powershellgallery.com/packages/ExchangeOnlineManagement',
         'Connect|MSOnline|Connect-MSOnline|MSOnline|MSOnline|https://www.powershellgallery.com/packages/MSOnline',
         'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread',
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview',
@@ -561,7 +561,7 @@ Function global:Get-ExchangeOnPremisesFQDN {
     $global:myOffice365Services['ExchangeOnPremisesFQDN'] = Read-Host -Prompt 'Enter Exchange On-Premises endpoint, e.g. exchange1.contoso.com'
 }
 
-function global:Connect-ComplianceCenter {
+function global:Connect-IPPSession {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
     If ( $global:myOffice365Services['Office365CredentialsMFA']) {
         Write-Host ('Connecting to Security & Compliance Center using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
@@ -576,20 +576,6 @@ function global:Connect-ComplianceCenter {
     }
 }
 
-function global:Connect-EOP {
-    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host ('Connecting to Exchange Online Protection using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['SessionEOP'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['EOPConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-    }
-    Else {
-        Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['SessionEOP'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['EOPConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-    }
-    If ( $global:myOffice365Services['SessionEOP'] ) {
-        Import-PSSession -Session $global:myOffice365Services['SessionEOP'] -AllowClobber
-    }
-}
 
 function global:Connect-MSTeams {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
@@ -1050,7 +1036,6 @@ function global:Connect-Office365 {
     Connect-ExchangeOnline
     Connect-MSTeams
     Connect-SkypeOnline
-    Connect-EOP
     Connect-ComplianceCenter
     Connect-SharePointOnline
 }
@@ -1107,40 +1092,45 @@ If( Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule' -ListAv
 ForEach ( $local:Function in $local:Functions) {
 
     $local:Item = ($local:Function).split('|')
+    $local:CreateMenuItem= $False
     If( $local:Item[3]) {
         $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending
         $local:ModuleMatch= ([System.Uri]($local:Module | Select-Object -First 1).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
-
         If( $local:ModuleMatch) {
-            If ( $local:CreateISEMenu) {
-                $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
-                If ( !( $local:MenuObj)) {
-                    Try {$local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus.Add( $local:Item[0], $null, $null)}
-                    Catch {Write-Warning -Message $_}
-                }
-                Try {
-                    $local:RemoveItems = $local:MenuObj.Submenus |  Where-Object -FilterScript { $_.DisplayName -eq $local:Item[1] -or $_.Action -eq $local:Item[2] }
-                    $null = $local:RemoveItems | ForEach-Object -Process { $local:MenuObj.Submenus.Remove( $_) }
-                    $null = $local:MenuObj.SubMenus.Add( $local:Item[1], [ScriptBlock]::Create( $local:Item[2]), $null)
-                }
-                Catch {
-                    Write-Warning -Message $_
-                }
+            $local:Module = $local:Module | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
+            If( $local:Item[5]) {
+                $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
             }
-            If ( $local:Item[3]) {
-                $local:Module = $local:Module | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
-                If( $local:Item[5]) {
-                    $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
-                }
-                Else {
-                    $local:Module= $local:Module | Select-Object -First 1
-                }
-                $local:Version = Get-ModuleVersionInfo -Module $local:Module
-                Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
+            Else {
+                $local:Module= $local:Module | Select-Object -First 1
             }
+            $local:Version = Get-ModuleVersionInfo -Module $local:Module
+            Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
+            $local:CreateMenuItem= $True
         }
         Else {
             # Module not found
+        }
+    }
+    Else {
+        # Local function
+        $local:CreateMenuItem= $True
+    }
+
+    If( $local:CreateMenuItem -and $local:CreateISEMenu) {
+        # Create menu item when module found or local function 
+        $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
+        If ( !( $local:MenuObj)) {
+            Try {$local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus.Add( $local:Item[0], $null, $null)}
+            Catch {Write-Warning -Message $_}
+        }
+        Try {
+            $local:RemoveItems = $local:MenuObj.Submenus |  Where-Object -FilterScript { $_.DisplayName -eq $local:Item[1] -or $_.Action -eq $local:Item[2] }
+            $null = $local:RemoveItems | ForEach-Object -Process { $local:MenuObj.Submenus.Remove( $_) }
+            $null = $local:MenuObj.SubMenus.Add( $local:Item[1], [ScriptBlock]::Create( $local:Item[2]), $null)
+        }
+        Catch {
+            Write-Warning -Message $_
         }
     }
 }
