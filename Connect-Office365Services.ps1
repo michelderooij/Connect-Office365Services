@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.13, August 14th 2023
+    Version 3.14, August 16th 2023
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -333,10 +333,11 @@
     3.11    Fixed header not displaying correction script version
     3.12    Replaced 'Prerelease' questions with switch - specify if you want, otherwise default is unspecified (=GA)
     3.13    Added ORCA to set of supported modules
+    3.14    Added O365CentralizedAddInDeployment to set of supported modules
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.13'
+$local:ScriptVersion= '3.14'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -399,6 +400,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|Microsoft365DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
         'Connect|Whiteboard|Get-Whiteboard|WhiteboardAdmin|WhiteboardAdmin|https://www.powershellgallery.com/packages/WhiteboardAdmin',
         'Connect|Microsoft Identity|Connect-MgGraph|MSIdentityTools|MSIdentityTools|https://www.powershellgallery.com/packages/MSIdentityTools',
+        'Connect|Microsoft Identity|Connect-OrganizationAddInService|O365CentralizedAddInDeployment|O365 Centralized Add-In Deployment Module|https://www.powershellgallery.com/packages/O365CentralizedAddInDeployment',
         'Report|ORCA|Get-ORCAReport|ORCA|Office 365 Recommended Configuration Analyzer (ORCA)|https://www.powershellgallery.com/packages/ORCA',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
