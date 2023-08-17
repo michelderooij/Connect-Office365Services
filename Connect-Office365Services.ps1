@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.15, August 16th 2023
+    Version 3.16, August 17th 2023
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -335,10 +335,11 @@
     3.14    Added O365CentralizedAddInDeployment to set of supported modules
     3.15    Fixed creating ISE menu options for local functions
             Removed Connect-EOP
+    3.16    Fixed duplicate reporting/updating because of ComplianceCenter/EXO being same module
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.15'
+$local:ScriptVersion= '3.16'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -748,6 +749,7 @@ Function global:Update-Office365Modules {
     )
 
     $local:Functions= Get-Office365ModuleInfo
+    $local:ReposChecked= [System.Collections.ArrayList]::new()
 
     $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
     If( $local:IsAdmin) {
@@ -756,7 +758,7 @@ Function global:Update-Office365Modules {
         }
         ForEach ( $local:Function in $local:Functions) {
             $local:Item = ($local:Function).split('|')
-            If( $local:Item[3]) {
+            If( $local:Item[3] -and -not $local:ReposChecked.Contains( $local:Item[3])) {
 
                 $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending 
 
@@ -903,6 +905,7 @@ Function global:Update-Office365Modules {
                     }
                 }
             }
+            $null= $local:ReposChecked.Add( $local:Item[3])
         }
     }
     Else {
@@ -964,18 +967,18 @@ Function global:Compare-TextVersionNumber {
 }
 
 Function global:Report-Office365Modules {
-
     param(
         [switch]$AllowPrerelease
     )
 
     $local:Functions= Get-Office365ModuleInfo
     $local:Repos= Get-PSRepository
+    $local:ReposChecked= [System.Collections.ArrayList]::new()
 
     ForEach ( $local:Function in $local:Functions) {
 
         $local:Item = ($local:Function).split('|')
-        If( $local:Item[3]) {
+        If( $local:Item[3] -and -not $local:ReposChecked.Contains( $local:Item[3])) {
             $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending
 
             # Use specific or default repository
@@ -1027,6 +1030,7 @@ Function global:Report-Office365Modules {
                 Write-Host ('{0} module not found ({1})' -f $local:Item[4], $local:Item[5])
             }
         }
+        $null= $local:ReposChecked.Add( $local:Item[3]) 
     }
 }
 
@@ -1089,11 +1093,13 @@ If( Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule' -ListAv
     Write-Warning 'Notice: The Exchange Online PowerShell module has been replaced by the Exchange Online Management module.'
 }
 
+$local:ReposChecked= [System.Collections.ArrayList]::new() 
+
 ForEach ( $local:Function in $local:Functions) {
 
     $local:Item = ($local:Function).split('|')
     $local:CreateMenuItem= $False
-    If( $local:Item[3]) {
+    If( $local:Item[3] -and -not $local:ReposChecked.Contains( $local:Item[3])) {
         $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending
         $local:ModuleMatch= ([System.Uri]($local:Module | Select-Object -First 1).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
         If( $local:ModuleMatch) {
@@ -1111,6 +1117,7 @@ ForEach ( $local:Function in $local:Functions) {
         Else {
             # Module not found
         }
+        $null= $local:ReposChecked.Add( $local:Item[3])
     }
     Else {
         # Local function
