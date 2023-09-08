@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.16, August 17th 2023
+    Version 3.17, September 8th, 2023
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -335,11 +335,12 @@
     3.14    Added O365CentralizedAddInDeployment to set of supported modules
     3.15    Fixed creating ISE menu options for local functions
             Removed Connect-EOP
-    3.16    Fixed duplicate reporting/updating because of ComplianceCenter/EXO being same module
+    3.16    Fixed duplicate module processing as connect ComplianceCenter/EXO is in same module
+    3.17    Added Microsoft.Graph.Compatibility.AzureAD (Preview)
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.16'
+$local:ScriptVersion= '3.17'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -387,6 +388,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|MSOnline|Connect-MSOnline|MSOnline|MSOnline|https://www.powershellgallery.com/packages/MSOnline',
         'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread',
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview',
+        'Connect|Azure AD (Adapter)|Connect-MgGraph|Microsoft.Graph.Compatibility.AzureAD|Compatibility Adapter for AzureAD PowerShell (Preview)|https://www.powershellgallery.com/packages/Microsoft.Graph.Compatibility.AzureAD',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService',
         'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams',
@@ -688,7 +690,6 @@ function global:Connect-PowerApps {
 Function global:Get-Office365Credentials {
 
     $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', $global:myOffice365Services['Office365Credentials'].UserName, '')
-    $local:MFAenabledModulePresence= $true
     $global:myOffice365Services['Office365CredentialsMFA'] = Get-MultiFactorAuthenticationUsage
     Get-TenantID
     Set-WindowTitle
