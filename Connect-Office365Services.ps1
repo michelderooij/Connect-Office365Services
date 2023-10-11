@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.17, September 8th, 2023
+    Version 3.18, October 11th, 2023
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -337,10 +337,11 @@
             Removed Connect-EOP
     3.16    Fixed duplicate module processing as connect ComplianceCenter/EXO is in same module
     3.17    Added Microsoft.Graph.Compatibility.AzureAD (Preview)
+    3.18    Added Microsoft.Graph.Beta
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.17'
+$local:ScriptVersion= '3.18'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -398,6 +399,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|PowerApps-PowerShell|Connect-PowerApps|Microsoft.PowerApps.PowerShell|PowerApps-PowerShell|https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell',
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune',
         'Connect|Microsoft.Graph|Connect-MSGraph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph',
+        'Connect|Microsoft.Graph.Beta|Connect-MSGraph|Microsoft.Graph.Beta|Microsoft.Graph.Beta|https://www.powershellgallery.com/packages/Microsoft.Graph.Beta',
         'Connect|MicrosoftPowerBIMgmt|Connect-PowerBIServiceAccount|MicrosoftPowerBIMgmt|MicrosoftPowerBIMgmt|https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt',
         'Connect|Az|Connect-AzAccount|Az|Az|https://www.powershellgallery.com/packages/Az',
         'Connect|Microsoft365DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
