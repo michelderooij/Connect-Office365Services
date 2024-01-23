@@ -13,7 +13,6 @@ After execution, the following helper functions will be available:
 * Connect-AzureActiveDirectory	    Connects to Azure Active Directory
 * Connect-AzureRMS           	    Connects to Azure Rights Management
 * Connect-ExchangeOnline     	    Connects to Exchange Online
-* Connect-SkypeOnline        	    Connects to Skype for Business Online
 * Connect-EOP                	    Connects to Exchange Online Protection
 * Connect-ComplianceCenter   	    Connects to Compliance Center
 * Connect-SharePointOnline   	    Connects to SharePoint Online
