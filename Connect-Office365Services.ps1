@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.18, October 11th, 2023
+    Version 3.19, January 24th, 2024
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -338,6 +338,9 @@
     3.16    Fixed duplicate module processing as connect ComplianceCenter/EXO is in same module
     3.17    Added Microsoft.Graph.Compatibility.AzureAD (Preview)
     3.18    Added Microsoft.Graph.Beta
+    3.19    Removed SkypeOnlineConnector & ExoPowerShellModule related code
+
+
 #>
 
 #Requires -Version 3.0
@@ -405,7 +408,7 @@ function global:Get-Office365ModuleInfo {
         'Connect|Microsoft365DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
         'Connect|Whiteboard|Get-Whiteboard|WhiteboardAdmin|WhiteboardAdmin|https://www.powershellgallery.com/packages/WhiteboardAdmin',
         'Connect|Microsoft Identity|Connect-MgGraph|MSIdentityTools|MSIdentityTools|https://www.powershellgallery.com/packages/MSIdentityTools',
-        'Connect|Microsoft Identity|Connect-OrganizationAddInService|O365CentralizedAddInDeployment|O365 Centralized Add-In Deployment Module|https://www.powershellgallery.com/packages/O365CentralizedAddInDeployment',
+        'Connect|Centralized Add-In Deployment|Connect-OrganizationAddInService|O365CentralizedAddInDeployment|O365 Centralized Add-In Deployment Module|https://www.powershellgallery.com/packages/O365CentralizedAddInDeployment',
         'Report|ORCA|Get-ORCAReport|ORCA|Office 365 Recommended Configuration Analyzer (ORCA)|https://www.powershellgallery.com/packages/ORCA',
         'Settings|Office 365 Credentials|Get-Office365Credentials',
         'Connect|Exchange On-Premises|Connect-ExchangeOnPremises',
@@ -1088,13 +1091,6 @@ $local:Functions= Get-Office365ModuleInfo
 $local:Repos= Get-PSRepository
 
 Write-Host ('Collecting Module information ..')
-
-If( Get-Module -Name 'SkypeOnlineConnector' -ListAvailable) {
-    Write-Warning 'Notice: The Skype for Business Online Connector PowerShell module functionality has moved to the Microsoft Teams module. Module retired February 15th, 2021.'
-}
-If( Get-Module -Name 'Microsoft.Exchange.Management.ExoPowershellModule' -ListAvailable) {
-    Write-Warning 'Notice: The Exchange Online PowerShell module has been replaced by the Exchange Online Management module.'
-}
 
 $local:ReposChecked= [System.Collections.ArrayList]::new() 
 
