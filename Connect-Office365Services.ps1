@@ -36,7 +36,6 @@
     - Connect-AzureActiveDirectory  Connects to Azure Active Directory
     - Connect-AzureRMS              Connects to Azure Rights Management
     - Connect-ExchangeOnline        Connects to Exchange Online (Graph module)
-    - Connect-SkypeOnline           Connects to Skype for Business Online
     - Connect-AIP                   Connects to Azure Information Protection
     - Connect-PowerApps             Connects to PowerApps
     - Connect-ComplianceCenter      Connects to Compliance Center
@@ -597,15 +596,6 @@ function global:Connect-MSTeams {
     }
 }
 
-function global:Connect-SkypeOnline {
-    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    Write-Host ('Connecting to Skype Online using {0}' -f $global:myOffice365Services['Office365Credentials'].username)
-    $global:myOffice365Services['SessionSFBO']= New-CsOnlineSession -Credential $global:myOffice365Services['Office365Credentials']
-    If ( $global:myOffice365Services['SessionSFBO'] ) {
-        Import-PSSession -Session $global:myOffice365Services['SessionSFBO'] -AllowClobber
-    }    
-}
-
 function global:Connect-AzureActiveDirectory {
     If ( !(Get-Module -Name AzureAD)) {Import-Module -Name AzureAD -ErrorAction SilentlyContinue}
     If ( !(Get-Module -Name AzureADPreview)) {Import-Module -Name AzureADPreview -ErrorAction SilentlyContinue}
@@ -1045,7 +1035,6 @@ function global:Connect-Office365 {
     Connect-AzureRMS
     Connect-ExchangeOnline
     Connect-MSTeams
-    Connect-SkypeOnline
     Connect-ComplianceCenter
     Connect-SharePointOnline
 }
