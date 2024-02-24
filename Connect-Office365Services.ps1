@@ -15,7 +15,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.19, January 24th, 2024
+    Version 3.20, February 24th, 2024
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -49,6 +49,7 @@
     - Set-Office365Environment	    Configures Uri's and region to use
     - Update-Office365Modules       Updates supported Office 365 modules
     - Report-Office365Modules       Report on known vs online module versions
+    - Clean-Office365Modules        Cleanup old versions of supported modules
 
     Functions to connect to other services provided by the module, e.g. Connect-MSGraph or Connect-MSTeams.
 
@@ -338,12 +339,11 @@
     3.17    Added Microsoft.Graph.Compatibility.AzureAD (Preview)
     3.18    Added Microsoft.Graph.Beta
     3.19    Removed SkypeOnlineConnector & ExoPowerShellModule related code
-
-
+    3.20    Added Clean-Office365Modules
 #>
 
 #Requires -Version 3.0
-$local:ScriptVersion= '3.18'
+$local:ScriptVersion= '3.20'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -714,27 +714,33 @@ function global:Get-ModuleVersionInfo {
     param( 
         $Module
     )
+    $Module= $Module | Select-Object -First 1
     $ModuleManifestPath = $Module.Path
-    $isModuleManifestPathValid = Test-Path -Path $ModuleManifestPath
-    If(!( $isModuleManifestPathValid)) {
-        # Module manifest path invalid, skipping extracting prerelease info
-        $ModuleVersion= $Module.Version.ToString()
-    }
-    Else {
-        $ModuleManifestContent = Get-Content -Path $ModuleManifestPath
-        $preReleaseInfo = $ModuleManifestContent -match "Prerelease = '(.*)'"
-        If( $preReleaseInfo) {
-            $preReleaseVersion= $preReleaseInfo[0].Split('=')[1].Trim().Trim("'")
-            If( $preReleaseVersion) {
-                $ModuleVersion= ('{0}-{1}' -f $Module.Version.ToString(), $preReleaseVersion)
+    If( $ModuleManifestPath) {
+        $isModuleManifestPathValid = Test-Path -Path $ModuleManifestPath
+        If(!( $isModuleManifestPathValid)) {
+            # Module manifest path invalid, skipping extracting prerelease info
+            $ModuleVersion= $Module.Version.ToString()
+        }
+        Else {
+            $ModuleManifestContent = Get-Content -Path $ModuleManifestPath
+            $preReleaseInfo = $ModuleManifestContent -match "Prerelease = '(.*)'"
+            If( $preReleaseInfo) {
+                $preReleaseVersion= $preReleaseInfo[0].Split('=')[1].Trim().Trim("'")
+                If( $preReleaseVersion) {
+                    $ModuleVersion= ('{0}-{1}' -f $Module.Version.ToString(), $preReleaseVersion)
+                }
+                Else {
+                    $ModuleVersion= $Module.Version.ToString()
+                }
             }
             Else {
                 $ModuleVersion= $Module.Version.ToString()
             }
         }
-        Else {
-            $ModuleVersion= $Module.Version.ToString()
-        }
+    }
+    Else {
+        $ModuleVersion= $Module.Version.ToString()
     }
     $ModuleVersion
 }
@@ -848,7 +854,7 @@ Function global:Update-Office365Modules {
 
                                 # Uninstall all old versions of dependencies
                                 If( $OnlineModule) {
-                                    ForEach( $DependencyModule in $OnlineModule.Dependencies) {
+                                    ForEach( $DependencyModule in $Module.Dependencies) {
 
                                         # Unload
                                         Remove-Module -Name $DependencyModule.Name -Force -Confirm:$False -ErrorAction SilentlyContinue
@@ -906,6 +912,83 @@ Function global:Update-Office365Modules {
     }
     Else {
         Write-Host ('Script not running with elevated privileges; cannot update modules') -ForegroundColor Yellow
+    }
+}
+
+Function global:Clean-Office365Modules {
+
+    $local:Functions= Get-Office365ModuleInfo
+    $local:ReposChecked= [System.Collections.ArrayList]::new()
+
+    $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    If( $local:IsAdmin) {
+        If( (Get-Process -Name powershell, pwsh -ErrorAction SilentlyContinue | Measure-Object).Count -gt 1) {
+            Write-Warning ('Running multiple PowerShell sessions, successful cleanup might be problematic.') 
+        }
+        ForEach ( $local:Function in $local:Functions) {
+
+            $local:Item = ($local:Function).split('|')
+            If( $local:Item[3] -and -not $local:ReposChecked.Contains( $local:Item[3])) {
+
+                $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending 
+
+                If( $local:Module) {
+                    $local:Version = Get-ModuleVersionInfo -Module $local:Module
+                    Write-Host ('Checking {0}' -f $local:Item[4])
+
+                    If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
+                        $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
+                    }
+                    Else {
+                        $local:ModuleVersions= Get-Module -Name $local:Item[3] -ListAvailable -All
+                    }
+
+                    $local:LatestModule = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
+                    $local:LatestVersion = ($local:LatestModule).Version
+
+                    $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
+                    If( $local:OldModules) {
+
+                        ForEach( $OldModule in $local:OldModules) {
+
+                            # Unload module when currently loaded
+                            Remove-Module -Name $local:Item[3] -Force -Confirm:$False -ErrorAction SilentlyContinue
+
+                            # Uninstall all old versions of the module
+                            Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
+                            Try {
+                                $OldModule | Uninstall-Module -Confirm:$false -Force
+                            }
+                            Catch {
+                                Write-Error ('Problem uninstalling module {0} version {1}' -f $OldModule.Name, $OldModule.Version) 
+                            }
+
+                            ForEach( $DependencyModule in $local:OldModule.Dependencies) {
+
+                                #Unloading dependency
+                                Remove-Module -Name $DependencyModule.Name -Force -Confirm:$False -ErrorAction SilentlyContinue
+
+                                Write-Host ('Uninstalling dependency module {0} version {1}' -f $DepModule.Name, $DepModule.Version)
+                                Try {
+                                    $DepModule | Uninstall-Module -Confirm:$false -Force
+                                }
+                                Catch {
+                                    Write-Error ('Problem uninstalling module {0} version {1}' -f $DepModule.Name, $DepModule.Version) 
+                                }
+                            }
+                        }
+                    }
+                    Else {
+                        Write-Host ('{0}: No old module versions found' -f $local:Item[4]) 
+                    }
+                }
+                $null= $local:ReposChecked.Add( $local:Item[3])
+            }
+        }
+        
+    }
+    Else {
+        Write-Host ('Script not running with elevated privileges; cannot remove modules') -ForegroundColor Yellow
     }
 }
 
