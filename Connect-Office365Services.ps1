@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.23, September 12th, 2024
+    Version 3.231, September 12th, 2024
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -345,6 +345,7 @@
             Removed ISE menu creation code
     3.23    Updated Clean-Office365Modules to process dependencies (eg Graph)
             Removed Compatibility Adapter for AzureAD PowerShell (predecessor Entra PowerShell)
+    3.231   Made dependency checking silent when nothing found
 #>
 
 #Requires -Version 5.0
@@ -907,10 +908,10 @@ Function global:Clean-Office365Modules {
                     Write-Host ('Checking {0} .. ' -f $local:Item[4]) -NoNewline
 
                     If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
-                        $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
+                        $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions -ErrorAction SilentlyContinue
                     }
                     Else {
-                        $local:ModuleVersions= Get-Module -Name $local:Item[3] -ListAvailable -All
+                        $local:ModuleVersions= Get-Module -Name $local:Item[3] -ListAvailable -All  -ErrorAction SilentlyContinue
                     }
 
                     $local:LatestModule = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
@@ -948,10 +949,10 @@ Function global:Clean-Office365Modules {
                         Write-Host ('Checking {0} .. ' -f $RequiredModule.Name) -NoNewline
 
                         If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
-                            $local:ModuleVersions= Get-InstalledModule -Name $RequiredModule.Name -AllVersions 
+                            $local:ModuleVersions= Get-InstalledModule -Name $RequiredModule.Name -AllVersions -ErrorAction SilentlyContinue
                         }
                         Else {
-                            $local:ModuleVersions= Get-Module -Name $RequiredModule.Name -ListAvailable -All
+                            $local:ModuleVersions= Get-Module -Name $RequiredModule.Name -ListAvailable -All -ErrorAction SilentlyContinue
                         }
     
                         $local:LatestModule = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
