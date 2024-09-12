@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.22, September 12th, 2024
+    Version 3.23, September 12th, 2024
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -343,10 +343,12 @@
             Removed Connect-AzureAD helper function
             Modified Get-TenantId to use OpenId endpoint to read ID using credentials' username when available
             Removed ISE menu creation code
+    3.23    Updated Clean-Office365Modules to process dependencies (eg Graph)
+            Removed Compatibility Adapter for AzureAD PowerShell (predecessor Entra PowerShell)
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.22'
+$local:ScriptVersion= '3.23'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -394,7 +396,6 @@ function global:Get-Office365ModuleInfo {
         'Connect|MSOnline|Connect-MSOnline|MSOnline|MSOnline|https://www.powershellgallery.com/packages/MSOnline',
         'Connect|Azure AD (v2)|Connect-AzureAD|AzureAD|Azure Active Directory (v2)|https://www.powershellgallery.com/packages/azuread',
         'Connect|Azure AD (v2 Preview)|Connect-AzureAD|AzureADPreview|Azure Active Directory (v2 Preview)|https://www.powershellgallery.com/packages/AzureADPreview',
-        'Connect|Azure AD (Adapter)|Connect-MgGraph|Microsoft.Graph.Compatibility.AzureAD|Compatibility Adapter for AzureAD PowerShell (Preview)|https://www.powershellgallery.com/packages/Microsoft.Graph.Compatibility.AzureAD',
         'Connect|Azure Information Protection|Connect-AIP|AIPService|Azure Information Protection|https://www.powershellgallery.com/packages/AIPService',
         'Connect|SharePoint Online|Connect-SharePointOnline|Microsoft.Online.Sharepoint.PowerShell|SharePoint Online|https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell',
         'Connect|Microsoft Teams|Connect-MSTeams|MicrosoftTeams|Microsoft Teams|https://www.powershellgallery.com/packages/MicrosoftTeams',
@@ -903,7 +904,7 @@ Function global:Clean-Office365Modules {
                 $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending 
 
                 If( $local:Module) {
-                    Write-Host ('Checking {0}' -f $local:Item[4])
+                    Write-Host ('Checking {0} .. ' -f $local:Item[4]) -NoNewline
 
                     If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
                         $local:ModuleVersions= Get-InstalledModule -Name $local:Item[3] -AllVersions 
@@ -918,37 +919,66 @@ Function global:Clean-Office365Modules {
                     $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
                     If( $local:OldModules) {
 
+                        Write-Host ('Old modules found')
+
                         ForEach( $OldModule in $local:OldModules) {
 
                             # Unload module when currently loaded
                             Remove-Module -Name $local:Item[3] -Force -Confirm:$False -ErrorAction SilentlyContinue
 
                             # Uninstall all old versions of the module
-                            Write-Host ('Uninstalling {0} version {1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
+                            Write-Host ('Uninstalling {0} v{1}' -f $local:Item[4], $OldModule.Version) -ForegroundColor White
                             Try {
                                 $OldModule | Uninstall-Module -Confirm:$false -Force
                             }
                             Catch {
-                                Write-Error ('Problem uninstalling module {0} version {1}' -f $OldModule.Name, $OldModule.Version) 
-                            }
-
-                            ForEach( $DependencyModule in $local:OldModule.Dependencies) {
-
-                                #Unloading dependency
-                                Remove-Module -Name $DependencyModule.Name -Force -Confirm:$False -ErrorAction SilentlyContinue
-
-                                Write-Host ('Uninstalling dependency module {0} version {1}' -f $DepModule.Name, $DepModule.Version)
-                                Try {
-                                    $DepModule | Uninstall-Module -Confirm:$false -Force
-                                }
-                                Catch {
-                                    Write-Error ('Problem uninstalling module {0} version {1}' -f $DepModule.Name, $DepModule.Version) 
-                                }
+                                Write-Error ('Problem uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version) 
                             }
                         }
                     }
                     Else {
-                        Write-Host ('{0}: No old module versions found' -f $local:Item[4]) 
+                        Write-Host ('OK') -ForegroundColor Green 
+                    }
+ 
+                    # Cleanup required modules as well
+                    $local:RequiredModules= $local:Module.RequiredModules | Sort-Object -Unique Name
+
+                    ForEach( $RequiredModule in $local:RequiredModules) {
+
+                        Write-Host ('Checking {0} .. ' -f $RequiredModule.Name) -NoNewline
+
+                        If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
+                            $local:ModuleVersions= Get-InstalledModule -Name $RequiredModule.Name -AllVersions 
+                        }
+                        Else {
+                            $local:ModuleVersions= Get-Module -Name $RequiredModule.Name -ListAvailable -All
+                        }
+    
+                        $local:LatestModule = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
+                        $local:LatestVersion = ($local:LatestModule).Version
+    
+                        $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
+                        If( $local:OldModules) {
+
+                            Write-Host ('Old required modules found')
+
+                            #Unloading dependency
+                            Remove-Module -Name $RequiredModule.Name -Force -Confirm:$False -ErrorAction SilentlyContinue
+
+                            ForEach( $OldModule in $local:OldModules) {
+
+                                Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version)
+                                Try {
+                                    $OldModule | Uninstall-Module -Confirm:$false -Force
+                                }
+                                Catch {
+                                    Write-Error ('Problem uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version) 
+                                }
+                            }
+                        }
+                        Else {
+                            Write-Host ('OK') -ForegroundColor Green 
+                        }    
                     }
                 }
                 $null= $local:ReposChecked.Add( $local:Item[3])
