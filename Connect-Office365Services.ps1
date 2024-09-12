@@ -3,10 +3,7 @@
     Connect-Office365Services
 
     PowerShell script defining functions to connect to Office 365 online services
-    or Exchange On-Premises. Call manually or alternatively embed or call from $profile
-    (Shell or ISE) to make functions available in your session. If loaded from
-    PowerShell_ISE, menu items are defined for the functions. To surpress creation of
-    menu items, hold 'Shift' while Powershell ISE loads.
+    or Exchange On-Premises.
 
     Michel de Rooij
     michel@eightwone.com
@@ -15,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.20, February 24th, 2024
+    Version 3.22, September 12th, 2024
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -33,7 +30,6 @@
 
     Helper Functions:
     =================
-    - Connect-AzureActiveDirectory  Connects to Azure Active Directory
     - Connect-AzureRMS              Connects to Azure Rights Management
     - Connect-ExchangeOnline        Connects to Exchange Online (Graph module)
     - Connect-AIP                   Connects to Azure Information Protection
@@ -340,10 +336,17 @@
     3.18    Added Microsoft.Graph.Beta
     3.19    Removed SkypeOnlineConnector & ExoPowerShellModule related code
     3.20    Added Clean-Office365Modules
+    3.21    Added Places module
+            Added Microsoft.Graph.Entra module
+            Added Microsoft.Graph.Entra.Beta module
+    3.22    Removed MFA/Non-MFA code
+            Removed Connect-AzureAD helper function
+            Modified Get-TenantId to use OpenId endpoint to read ID using credentials' username when available
+            Removed ISE menu creation code
 #>
 
-#Requires -Version 3.0
-$local:ScriptVersion= '3.20'
+#Requires -Version 5.0
+$local:ScriptVersion= '3.22'
 
 function global:Set-WindowTitle {
     If( $host.ui.RawUI.WindowTitle -and $global:myOffice365Services['TenantID']) {
@@ -402,6 +405,9 @@ function global:Get-Office365ModuleInfo {
         'Connect|MSGraph-Intune|Connect-MSGraph|Microsoft.Graph.Intune|MSGraph-Intune|https://www.powershellgallery.com/packages/Microsoft.Graph.Intune',
         'Connect|Microsoft.Graph|Connect-MSGraph|Microsoft.Graph|Microsoft.Graph|https://www.powershellgallery.com/packages/Microsoft.Graph',
         'Connect|Microsoft.Graph.Beta|Connect-MSGraph|Microsoft.Graph.Beta|Microsoft.Graph.Beta|https://www.powershellgallery.com/packages/Microsoft.Graph.Beta',
+        'Connect|Microsoft.Graph.Entra|Connect-Entra|Microsoft.Graph.Entra|Microsoft.Graph.Entra|https://www.powershellgallery.com/packages/Microsoft.Graph.Entra',
+        'Connect|Microsoft.Graph.Entra.Beta|Connect-Entra|Microsoft.Graph.Entra.Beta|Microsoft.Graph.Entra.Beta|https://www.powershellgallery.com/packages/Microsoft.Graph.Entra.Beta',
+        'Connect|MicrosoftPlaces|Connect-MicrosoftPlaces|MicrosoftPlaces|MicrosoftPlaces|https://www.powershellgallery.com/packages/MicrosoftPlaces',
         'Connect|MicrosoftPowerBIMgmt|Connect-PowerBIServiceAccount|MicrosoftPowerBIMgmt|MicrosoftPowerBIMgmt|https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt',
         'Connect|Az|Connect-AzAccount|Az|Az|https://www.powershellgallery.com/packages/Az',
         'Connect|Microsoft365DSC|New-M365DSCConnection|Microsoft365DSC|Microsoft365DSC|https://www.powershellgallery.com/packages/Microsoft36DSC',
@@ -529,25 +535,28 @@ function global:Connect-ExchangeOnline {
         $PSBoundParameters['PSSessionOption']= $global:myOffice365Services['SessionExchangeOptions']
     }
     If ( $PSBoundParameters.ContainsKey('UserPrincipalName') -or $PSBoundParameters.ContainsKey('Certificate') -or $PSBoundParameters.ContainsKey('CertificateFilePath') -or $PSBoundParameters.ContainsKey('CertificateThumbprint') -or $PSBoundParameters.ContainsKey('AppId')) {
-        $global:myOffice365Services['Office365CredentialsMFA']= $True
-        Write-Host ('Connecting to Exchange Online with specified Modern Authentication method ..')
+        Write-Host ('Connecting to Exchange Online ..')
     }
     Else {
         If ( $PSBoundParameters.ContainsKey('Credential')) {
-            If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-            If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-                Write-Host ('Connecting to Exchange Online with {0} using Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
-                $PSBoundParameters['UserPrincipalName']= ($global:myOffice365Services['Office365Credentials']).UserName
-            }
-            Else {
-                Write-Host ('Connecting to Exchange Online with {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-                $PSBoundParameters['Credential']= $global:myOffice365Services['Office365Credentials'] 
-            }
+            Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
+            $global:myOffice365Services['Office365Credentials']= $Credential
         }
         Else {
-            Write-Host ('Connecting to Exchange Online with {0} using Legacy Authentication..' -f $PSBoundParameters['Credential'].UserName)
-            $global:myOffice365Services['Office365CredentialsMFA']= $False
-            $global:myOffice365Services['Office365Credentials']= $PSBoundParameters['Credential']
+            If ( $global:myOffice365Services['Office365Credentials']) {
+                Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+                $PSBoundParameters['Credential']= $global:myOffice365Services['Office365Credentials']
+            }
+            Else {
+                Get-Office365Credentials
+                If ( $global:myOffice365Services['Office365Credentials']) {
+                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+                    $PSBoundParameters['Credential']= $global:myOffice365Services['Office365Credentials']
+                }
+                Else {
+                    Write-Host ('Connecting to Exchange Online ..')
+                }
+            }
         }
     }
     $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline @PSBoundParameters
@@ -559,9 +568,11 @@ function global:Connect-ExchangeOnline {
 function global:Connect-ExchangeOnPremises {
     If ( !($global:myOffice365Services['OnPremisesCredentials'])) { Get-OnPremisesCredentials }
     If ( !($global:myOffice365Services['ExchangeOnPremisesFQDN'])) { Get-ExchangeOnPremisesFQDN }
-    Write-Host ('Connecting to Exchange On-Premises {0} using {1} ..' -f $global:myOffice365Services['ExchangeOnPremisesFQDN'], $global:myOffice365Services['OnPremisesCredentials'].username)
-    $global:myOffice365Services['SessionExchange'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($global:myOffice365Services['ExchangeOnPremisesFQDN'])/PowerShell" -Credential $global:myOffice365Services['OnPremisesCredentials'] -Authentication Kerberos -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
-    If ( $global:myOffice365Services['SessionExchange']) {Import-PSSession -Session $global:myOffice365Services['SessionExchange'] -AllowClobber}
+    If ( !($global:myOffice365Services['OnPremisesCredentials'])) {
+        Write-Host ('Connecting to Exchange On-Premises {0} using {1} ..' -f $global:myOffice365Services['ExchangeOnPremisesFQDN'], $global:myOffice365Services['OnPremisesCredentials'].username)
+        $global:myOffice365Services['SessionExchange'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($global:myOffice365Services['ExchangeOnPremisesFQDN'])/PowerShell" -Credential $global:myOffice365Services['OnPremisesCredentials'] -Authentication Kerberos -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
+        If ( $global:myOffice365Services['SessionExchange']) {Import-PSSession -Session $global:myOffice365Services['SessionExchange'] -AllowClobber}
+    }
 }
 
 Function global:Get-ExchangeOnPremisesFQDN {
@@ -570,12 +581,12 @@ Function global:Get-ExchangeOnPremisesFQDN {
 
 function global:Connect-IPPSession {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host ('Connecting to Security & Compliance Center using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
+    If ( $global:myOffice365Services['Office365Credentials']) {
+        Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
         $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     Else {
-        Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        Write-Host ('Connecting to Security & Compliance Center ..')
         $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
     }
     If ( $global:myOffice365Services['SessionCC'] ) {
@@ -586,40 +597,8 @@ function global:Connect-IPPSession {
 
 function global:Connect-MSTeams {
     If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-        Write-Host ('Connecting to Microsoft Teams using {0} with Modern Authentication ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        Connect-MicrosoftTeams -AccountId ($global:myOffice365Services['Office365Credentials']).UserName -TenantId $myOffice365Services['TenantId']
-    }
-    Else {
-        Write-Host ('Connecting to Exchange Online Protection using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        Connect-MicrosoftTeams -Credential $global:myOffice365Services['Office365Credentials']
-    }
-}
-
-function global:Connect-AzureActiveDirectory {
-    If ( !(Get-Module -Name AzureAD)) {Import-Module -Name AzureAD -ErrorAction SilentlyContinue}
-    If ( !(Get-Module -Name AzureADPreview)) {Import-Module -Name AzureADPreview -ErrorAction SilentlyContinue}
-    If ( (Get-Module -Name AzureAD) -or (Get-Module -Name AzureADPreview)) {
-        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-            Write-Host 'Connecting to Azure Active Directory with Modern Authentication ..'
-            $Parms = @{AccountId= $global:myOffice365Services['Office365Credentials'].UserName; AzureEnvironment= $global:myOffice365Services['AzureEnvironment']}
-        }
-        Else {
-            Write-Host ('Connecting to Azure Active Directory using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-            $Parms = @{'Credential' = $global:myOffice365Services['Office365Credentials']; 'AzureEnvironment' = $global:myOffice365Services['AzureEnvironment']}
-        }
-        Connect-AzureAD @Parms
-    }
-    Else {
-        If ( !(Get-Module -Name MSOnline)) {Import-Module -Name MSOnline -ErrorAction SilentlyContinue}
-        If ( Get-Module -Name MSOnline) {
-            If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-            Write-Host ('Connecting to Azure Active Directory using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-            Connect-MsolService -Credential $global:myOffice365Services['Office365Credentials'] -AzureEnvironment $global:myOffice365Services['AzureEnvironment']
-        }
-        Else {Write-Error -Message 'Cannot connect to Azure Active Directory - problem loading module.'}
-    }
+    Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+    Connect-MicrosoftTeams -AccountId ($global:myOffice365Services['Office365Credentials']).UserName -TenantId $myOffice365Services['TenantId']
 }
 
 function global:Connect-AIP {
@@ -629,7 +608,9 @@ function global:Connect-AIP {
         Write-Host ('Connecting to Azure Information Protection using {0}' -f $global:myOffice365Services['Office365Credentials'].username)
         Connect-AipService -Credential $global:myOffice365Services['Office365Credentials'] 
     }
-    Else {Write-Error -Message 'Cannot connect to Azure Information Protection - problem loading module.'}
+    Else {
+        Write-Error -Message 'Cannot connect to Azure Information Protection - problem loading module.'
+    }
 }
 
 function global:Connect-SharePointOnline {
@@ -642,20 +623,10 @@ function global:Connect-SharePointOnline {
         Else {
             If ( !($global:myOffice365Services['Office365Tenant'])) { Get-Office365Tenant }
         }
-        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-            Write-Host 'Connecting to SharePoint Online with Modern Authentication ..'
-            $Parms = @{
-                url= 'https://{0}-admin.sharepoint.com' -f $($global:myOffice365Services['Office365Tenant'])
-                region= $global:myOffice365Services['SharePointRegion']
-            }
-        }
-        Else {
-            Write-Host "Connecting to SharePoint Online using $($global:myOffice365Services['Office365Credentials'].username) .."
-            $Parms = @{
-                url= 'https://{0}-admin.sharepoint.com' -f $global:myOffice365Services['Office365Tenant']
-                credential= $global:myOffice365Services['Office365Credentials']
-                region= $global:myOffice365Services['SharePointRegion']
-            }
+        Write-Host 'Connecting to SharePoint Online  ..'
+        $Parms = @{
+            url= 'https://{0}-admin.sharepoint.com' -f $($global:myOffice365Services['Office365Tenant'])
+            region= $global:myOffice365Services['SharePointRegion']
         }
         Connect-SPOService @Parms
     }
@@ -669,12 +640,7 @@ function global:Connect-PowerApps {
     If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         Write-Host "Connecting to PowerApps using $($global:myOffice365Services['Office365Credentials'].username) .."
-        If ( $global:myOffice365Services['Office365CredentialsMFA']) {
-            $Parms = @{'Username' = $global:myOffice365Services['Office365Credentials'].UserName }
-        }
-        Else {
-            $Parms = @{'Username' = $global:myOffice365Services['Office365Credentials'].UserName; 'Password'= $global:myOffice365Services['Office365Credentials'].Password }
-        }
+        $Parms = @{'Username' = $global:myOffice365Services['Office365Credentials'].UserName }
         Add-PowerAppsAccount @Parms
     }
     Else {
@@ -683,9 +649,7 @@ function global:Connect-PowerApps {
 }
 
 Function global:Get-Office365Credentials {
-
     $global:myOffice365Services['Office365Credentials'] = $host.ui.PromptForCredential('Office 365 Credentials', 'Please enter your Office 365 credentials', $global:myOffice365Services['Office365Credentials'].UserName, '')
-    $global:myOffice365Services['Office365CredentialsMFA'] = Get-MultiFactorAuthenticationUsage
     Get-TenantID
     Set-WindowTitle
 }
@@ -695,7 +659,13 @@ Function global:Get-OnPremisesCredentials {
 }
 
 Function global:Get-Office365Tenant {
-    $global:myOffice365Services['Office365Tenant'] = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
+    If( $global:myOffice365Services['Office365Credentials']) {
+        $local:OpenIdInfo= Invoke-RestMethod ('https://login.windows.net/{0}/.well-known/openid-configuration' -f ($global:myOffice365Services['Office365Credentials'].UserName.Split('@')[1])) -Method GET
+        $global:myOffice365Services['Office365Tenant']= $local:OpenIdInfo.userinfo_endpoint.Split('/')[3]
+    }
+    Else {
+        $global:myOffice365Services['Office365Tenant'] = Read-Host -Prompt 'Enter tenant ID, e.g. contoso for contoso.onmicrosoft.com'
+    }
 }
 
 Function global:Get-ModuleScope {
@@ -933,7 +903,6 @@ Function global:Clean-Office365Modules {
                 $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending 
 
                 If( $local:Module) {
-                    $local:Version = Get-ModuleVersionInfo -Module $local:Module
                     Write-Host ('Checking {0}' -f $local:Item[4])
 
                     If( Get-Command -Name Get-InstalledModule -ErrorAction SilentlyContinue) {
@@ -1143,9 +1112,6 @@ Write-Host ('Connect-Office365Services v{0}' -f $local:ScriptVersion)
 # See if the Administator built-in role is part of your role
 $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
 
-$local:CreateISEMenu = $psISE -and -not [System.Windows.Input.Keyboard]::IsKeyDown( [System.Windows.Input.Key]::LeftShift)
-If ( $local:CreateISEMenu) {Write-Host 'ISE detected, adding ISE menu options'}
-
 # Initialize global state variable when needed
 If( -not( Get-Variable myOffice365Services -ErrorAction SilentlyContinue )) { $global:myOffice365Services=@{} }
 
@@ -1164,16 +1130,15 @@ $local:Repos= Get-PSRepository
 
 Write-Host ('Collecting Module information ..')
 
-$local:ReposChecked= [System.Collections.ArrayList]::new() 
+$local:ReposChecked= [System.Collections.ArrayList]::new()  
 
-ForEach ( $local:Function in $local:Functions) {
+$local:Functions | ForEach-Object -Process {
 
-    $local:Item = ($local:Function).split('|')
-    $local:CreateMenuItem= $False
+    $local:Item = ($_).split('|')
     If( $local:Item[3] -and -not $local:ReposChecked.Contains( $local:Item[3])) {
         $local:Module= Get-Module -Name ('{0}' -f $local:Item[3]) -ListAvailable | Sort-Object -Property Version -Descending
         $local:ModuleMatch= ([System.Uri]($local:Module | Select-Object -First 1).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item[5]).Authority
-        If( $local:ModuleMatch) {
+        If( $local:ModuleMatch) { 
             $local:Module = $local:Module | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
             If( $local:Item[5]) {
                 $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item[5])).Authority } | Select-Object -First 1
@@ -1183,32 +1148,10 @@ ForEach ( $local:Function in $local:Functions) {
             }
             $local:Version = Get-ModuleVersionInfo -Module $local:Module
             Write-Host ('Found {0} module (v{1})' -f $local:Item[4], $local:Version) -ForegroundColor Green
-            $local:CreateMenuItem= $True
         }
         Else {
             # Module not found
-        }
+        } 
         $null= $local:ReposChecked.Add( $local:Item[3])
-    }
-    Else {
-        # Local function
-        $local:CreateMenuItem= $True
-    }
-
-    If( $local:CreateMenuItem -and $local:CreateISEMenu) {
-        # Create menu item when module found or local function 
-        $local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus | Where-Object -FilterScript { $_.DisplayName -eq $local:Item[0] }
-        If ( !( $local:MenuObj)) {
-            Try {$local:MenuObj = $psISE.CurrentPowerShellTab.AddOnsMenu.SubMenus.Add( $local:Item[0], $null, $null)}
-            Catch {Write-Warning -Message $_}
-        }
-        Try {
-            $local:RemoveItems = $local:MenuObj.Submenus |  Where-Object -FilterScript { $_.DisplayName -eq $local:Item[1] -or $_.Action -eq $local:Item[2] }
-            $null = $local:RemoveItems | ForEach-Object -Process { $local:MenuObj.Submenus.Remove( $_) }
-            $null = $local:MenuObj.SubMenus.Add( $local:Item[1], [ScriptBlock]::Create( $local:Item[2]), $null)
-        }
-        Catch {
-            Write-Warning -Message $_
-        }
     }
 }
