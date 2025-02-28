@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.4, February 24th, 2025
+    Version 3.41, February 28th, 2025
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -351,10 +351,11 @@
             Removed obsolete repository code
             Code cleanup
             Cosmetic changes in output
+    3.41    Fixed parameter usage issue with not using PSResourceGet
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.4'
+$local:ScriptVersion= '3.41'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -378,11 +379,10 @@ Function global:Get-myModule {
             Get-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -ErrorAction SilentlyContinue
         }
         Else {
-            Get-Module -Name $Name  -ListAvailable:$ListAvailable -AllowPrerelease:$AllowPrerelease -ErrorAction SilentlyContinue
+            Get-Module -Name $Name -ListAvailable:$ListAvailable -ErrorAction SilentlyContinue
         }
     }
 }
-
 
 Function global:Find-myModule {
     [CmdletBinding()]
@@ -1257,7 +1257,7 @@ $local:Functions | ForEach-Object -Process {
 
     $local:Item = $_
 
-    $local:Module= Get-MYModule -Name ('{0}' -f $local:Item.Module) -ListAvailable | Sort-Object -Property Version -Descending
+    $local:Module= Get-MyModule -Name ('{0}' -f $local:Item.Module) -ListAvailable | Sort-Object -Property Version -Descending
     $local:ModuleMatch= ([System.Uri]($local:Module | Select-Object -First 1).RepositorySourceLocation).Authority -eq ([System.Uri]$local:Item.Repo).Authority
     If( $local:ModuleMatch) {
         $local:Module = $local:Module | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
