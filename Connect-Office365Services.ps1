@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.41, February 28th, 2025
+    Version 3.42, April 2nd, 2025
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -352,10 +352,11 @@
             Code cleanup
             Cosmetic changes in output
     3.41    Fixed parameter usage issue with not using PSResourceGet
+    3.42    Added error handling to Uninstall-MyModule output error handling
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.41'
+$local:ScriptVersion= '3.42'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -420,7 +421,7 @@ Function global:Uninstall-myModule {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        [string[]]$Name,
+        [string]$Name,
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
         $Version,
         [switch]$IsPrerelease
@@ -430,11 +431,32 @@ Function global:Uninstall-myModule {
         # Unload module if needed
         Remove-Module -Name $Name -Force -ErrorAction SilentlyContinue
 
-        If( $global:myOffice365Services['PSResourceGet']) {
-            Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+        Try {
+            If( $global:myOffice365Services['PSResourceGet']) {
+                Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+            }
+            Else {
+                Uninstall-Module -Name $Name -RequiredVersion [string]$Version  -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force
+            }
         }
-        Else {
-            Uninstall-Module -Name $Name -RequiredVersion [string]$Version  -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force
+        Catch {
+            Switch -Regex ($PSItem.FullyQualifiedErrorId) {
+                '^AdminPrivilegesRequiredForUninstall,' {
+                    Write-Warning ('Unable to uninstall module without Administrator rights: {0} v{1}' -f $Name, $Version)
+                }
+
+                '^ModuleIsInUse,' {
+                    # Module throws own error
+                }
+
+                '^(UnableToUninstallAsOtherModulesNeedThisModule|UninstallPSResourcePackageIsaDependency),' {
+                    Write-Warning ('Unable to uninstall module {0} v{1} due to dependencies' -f $Name, $Version)
+                }
+
+                Default {
+                    Write-Warning ('Problem uninstalling module {0} v{1}: {2}' -f $Name, $Version, $Error[0].Exception.Message)
+                }
+            }
         }
     }
 }
