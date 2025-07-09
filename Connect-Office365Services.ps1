@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.43, July 10th, 2025
+    Version 3.44, July 10th, 2025
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -354,10 +354,12 @@
     3.41    Fixed parameter usage issue with not using PSResourceGet
     3.42    Added error handling to Uninstall-MyModule output error handling
     3.43    Fixed Connect-ExchangeOnline
+    3.44    Minor cosmetic changes
+            Added Quote of the Day like message
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.43'
+$local:ScriptVersion= '3.44'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -772,13 +774,13 @@ function global:Connect-ExchangeOnline {
         }
         Else {
             If ( $global:myOffice365Services['Office365Credentials']) {
-                Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+                Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
                 $PSBoundParameters['Credential']= $global:myOffice365Services['Office365Credentials']
             }
             Else {
                 Get-Office365Credentials
                 If ( $global:myOffice365Services['Office365Credentials']) {
-                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
                     $PSBoundParameters['Credential']= $global:myOffice365Services['Office365Credentials']
                 }
                 Else {
@@ -804,7 +806,7 @@ function global:Connect-ExchangeOnPremises {
     If ( !($global:myOffice365Services['OnPremisesCredentials'])) { Get-OnPremisesCredentials }
     If ( !($global:myOffice365Services['ExchangeOnPremisesFQDN'])) { Get-ExchangeOnPremisesFQDN }
     If ( !($global:myOffice365Services['OnPremisesCredentials'])) {
-        Write-Host ('Connecting to Exchange On-Premises {0} using {1} ..' -f $global:myOffice365Services['ExchangeOnPremisesFQDN'], $global:myOffice365Services['OnPremisesCredentials'].username)
+        Write-Host ('Connecting to Exchange On-Premises {0} using {1} ..' -f $global:myOffice365Services['ExchangeOnPremisesFQDN'], $global:myOffice365Services['OnPremisesCredentials'].UserName)
         $global:myOffice365Services['SessionExchange'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($global:myOffice365Services['ExchangeOnPremisesFQDN'])/PowerShell" -Credential $global:myOffice365Services['OnPremisesCredentials'] -Authentication Kerberos -AllowRedirection -SessionOption $global:myOffice365Services['SessionExchangeOptions']
         If ( $global:myOffice365Services['SessionExchange']) {Import-PSSession -Session $global:myOffice365Services['SessionExchange'] -AllowClobber}
     }
@@ -819,7 +821,7 @@ function global:Connect-IPPSession {
     If ( Get-Module -Name ExchangeOnlineManagement) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         If ( $global:myOffice365Services['Office365Credentials']) {
-            Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+            Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
             $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
         }
         Else {
@@ -841,7 +843,7 @@ function global:Connect-MSTeams {
     If ( !(Get-Module -Name MicrosoftTeams)) {Import-Module -Name MicrosoftTeams -ErrorAction SilentlyContinue}
     If ( Get-Module -Name MicrosoftTeams) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
         Connect-MicrosoftTeams -AccountId ($global:myOffice365Services['Office365Credentials']).UserName -TenantId $global:myOffice365Services['TenantId']
     }
     Else {
@@ -853,7 +855,7 @@ function global:Connect-AIP {
     If ( !(Get-Module -Name AIPService)) {Import-Module -Name AIPService -ErrorAction SilentlyContinue}
     If ( Get-Module -Name AIPService) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        Write-Host ('Connecting to Azure Information Protection using {0}' -f $global:myOffice365Services['Office365Credentials'].username)
+        Write-Host ('Connecting to Azure Information Protection using {0}' -f $global:myOffice365Services['Office365Credentials'].UserName)
         Connect-AipService -Credential $global:myOffice365Services['Office365Credentials']
     }
     Else {
@@ -865,8 +867,8 @@ function global:Connect-SharePointOnline {
     If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
         Import-Module -Name Microsoft.Online.Sharepoint.PowerShell -ErrorAction Stop
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        If (($global:myOffice365Services['Office365Credentials']).username -like '*.onmicrosoft.com') {
-            $global:myOffice365Services['Office365Tenant'] = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
+        If (($global:myOffice365Services['Office365Credentials']).UserName -like '*.onmicrosoft.com') {
+            $global:myOffice365Services['Office365Tenant'] = ($global:myOffice365Services['Office365Credentials']).UserName.Substring(($global:myOffice365Services['Office365Credentials']).UserName.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
         }
         Else {
             If ( !($global:myOffice365Services['Office365Tenant'])) { Get-Office365Tenant }
@@ -887,7 +889,7 @@ function global:Connect-PowerApps {
     If ( !(Get-Module -Name Microsoft.PowerApps.Administration.PowerShell)) {Import-Module -Name Microsoft.PowerApps.Administration.PowerShell -ErrorAction SilentlyContinue}
     If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        Write-Host "Connecting to PowerApps using $($global:myOffice365Services['Office365Credentials'].username) .."
+        Write-Host "Connecting to PowerApps using $($global:myOffice365Services['Office365Credentials'].UserName) .."
         $Parms = @{'Username' = $global:myOffice365Services['Office365Credentials'].UserName }
         Add-PowerAppsAccount @Parms
     }
@@ -1305,8 +1307,6 @@ $local:Functions= Get-Office365ModuleInfo
 # Determine if we can use PSResourceGet or need to use Module cmdlets
 Get-myPSResourceGetInstalled
 
-Write-Host ('Collecting Module information ..')
-
 $local:Functions | ForEach-Object -Process {
 
     $local:Item = $_
@@ -1317,7 +1317,7 @@ $local:Functions | ForEach-Object -Process {
         $local:Module = $local:Module | Sort-Object -Property @{e= { [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending
         $local:Module= $local:Module | Where-Object {([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item.Repo)).Authority } | Select-Object -First 1
         $local:Version = Get-ModuleVersionInfo -Module $local:Module
-        Write-Host ('Found {0} (v{1})' -f $local:Item.Description, $local:Version) -ForegroundColor Green
+        Write-Host ('Found {0} (v{1})' -f $local:Item.Description, $local:Version)
         If( $local:Item.ReplacedBy) {
             Write-Warning ('{0} replaced by {1}' -f $local:Item.Module, $local:Item.ReplacedBy)
         }
@@ -1326,3 +1326,16 @@ $local:Functions | ForEach-Object -Process {
         # Module not found
     }
 }
+
+#Get random text
+$local:Quotes= @(
+    'You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.',
+    'You wake up. The room is spinning very gently round your head. Or at least it would be if you could see it which you can''t. It is pitch black.',
+    'You are in a comfortable tunnel like hall. To the east there is the round green door.',
+    'You are standing at the end of a road before a small brick building. Around you is a forest. A small stream flows out of the building and down a gully.',
+    'SHALL WE PLAY A GAME?',
+    'REQUEST ACCESS TO CLU PROGRAM',
+    'You are in a clearing, with a forest surrounding you on all sides. A path leads north.'
+)
+Write-Host ( '{0}{1}' -f [System.Environment]::NewLine, ($local:Quotes | Get-Random))
+
