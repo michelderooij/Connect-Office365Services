@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.42, April 2nd, 2025
+    Version 3.43, July 10th, 2025
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -353,10 +353,11 @@
             Cosmetic changes in output
     3.41    Fixed parameter usage issue with not using PSResourceGet
     3.42    Added error handling to Uninstall-MyModule output error handling
+    3.43    Fixed Connect-ExchangeOnline
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.42'
+$local:ScriptVersion= '3.43'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -712,14 +713,15 @@ function global:Set-Office365Environment {
 
 function global:Connect-ExchangeOnline {
     [CmdletBinding()]
-    Param(
+    param(
         [string]$ConnectionUri,
         [string]$AzureADAuthorizationEndpointUri,
-        [System.Management.Automation.Remoting.PSSessionOption]$PSSessionOption,
+        [string]$ExchangeEnvironmentName,
+        [System.Management.Automation.Remoting.PSSessionOption]$PSSessionOption= $null,
         [switch]$BypassMailboxAnchoring= $false,
         [string]$DelegatedOrganization,
         [string]$Prefix,
-        [switch]$ShowBanner= $False,
+        [switch]$ShowBanner,
         [string]$UserPrincipalName,
         [System.Management.Automation.PSCredential]$Credential,
         [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate,
@@ -728,18 +730,26 @@ function global:Connect-ExchangeOnline {
         [string]$CertificateThumbprint,
         [string]$AppId,
         [string]$Organization,
+        [string]$AccessToken = '',
+        [switch]$ManagedIdentity,
+        [string]$ManagedIdentityAccountId,
         [switch]$EnableErrorReporting,
         [string]$LogDirectoryPath,
         $LogLevel,
         [bool]$TrackPerformance,
-        [bool]$ShowProgress= $True,
+        [bool]$ShowProgress= $true,
         [bool]$UseMultithreading,
         [uint32]$PageSize,
         [switch]$Device,
         [switch]$InlineCredential,
         [string[]]$CommandName = @("*"),
         [string[]]$FormatTypeName = @("*"),
-        [switch]$UseRPSSession = $false
+        [switch] $SkipLoadingFormatData = $false,
+        [switch] $SkipLoadingCmdletHelp = $true,
+        [switch] $LoadCmdletHelp = $false,
+        [System.Security.Cryptography.X509Certificates.X509Certificate2] $SigningCertificate = $null,
+        [switch] $DisableWAM = $false,
+        [switch] $UseRPSSession = $false
     )
     if (!( $PSBoundParameters.ContainsKey('ConnectionUri'))) {
         $PSBoundParameters['ConnectionUri']= $global:myOffice365Services['ConnectionEndpointUri']
@@ -750,12 +760,14 @@ function global:Connect-ExchangeOnline {
     if (!( $PSBoundParameters.ContainsKey('PSSessionOption'))) {
         $PSBoundParameters['PSSessionOption']= $global:myOffice365Services['SessionExchangeOptions']
     }
-    If ( $PSBoundParameters.ContainsKey('UserPrincipalName') -or $PSBoundParameters.ContainsKey('Certificate') -or $PSBoundParameters.ContainsKey('CertificateFilePath') -or $PSBoundParameters.ContainsKey('CertificateThumbprint') -or $PSBoundParameters.ContainsKey('AppId')) {
+    If ( $PSBoundParameters.ContainsKey('UserPrincipalName') -or $PSBoundParameters.ContainsKey('Certificate') -or
+        $PSBoundParameters.ContainsKey('CertificateFilePath') -or $PSBoundParameters.ContainsKey('CertificateThumbprint') -or
+        $PSBoundParameters.ContainsKey('AppId')) {
         Write-Host ('Connecting to Exchange Online ..')
     }
     Else {
         If ( $PSBoundParameters.ContainsKey('Credential')) {
-            Write-Host ('Connecting to Exchange Online using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
+            Write-Host ('Connecting to Exchange Online using {0} ..' -f ($Credential).UserName)
             $global:myOffice365Services['Office365Credentials']= $Credential
         }
         Else {
@@ -775,9 +787,16 @@ function global:Connect-ExchangeOnline {
             }
         }
     }
-    $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline @PSBoundParameters
-    If ( $global:myOffice365Services['Session365'] ) {
-        Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
+
+    If ( !(Get-Module -Name ExchangeOnlineManagement)) {Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue}
+    If ( Get-Module -Name ExchangeOnlineManagement) {
+        $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline @PSBoundParameters
+        If ( $global:myOffice365Services['Session365'] ) {
+            Import-PSSession -Session $global:myOffice365Services['Session365'] -AllowClobber
+        }
+    }
+    Else {
+        Write-Error -Message 'Cannot connect to Exchange Online - module not installed or not loading.'
     }
 }
 
@@ -796,25 +815,38 @@ Function global:Get-ExchangeOnPremisesFQDN {
 }
 
 function global:Connect-IPPSession {
-    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    If ( $global:myOffice365Services['Office365Credentials']) {
-        Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-        $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+    If ( !(Get-Module -Name ExchangeOnlineManagement)) {Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue}
+    If ( Get-Module -Name ExchangeOnlineManagement) {
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        If ( $global:myOffice365Services['Office365Credentials']) {
+            Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+            $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        }
+        Else {
+            Write-Host ('Connecting to Security & Compliance Center ..')
+            Import-Module -Name ExchangeOnlineManagement -ErrorAction Stop
+            $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
+        }
+        If ( $global:myOffice365Services['SessionCC'] ) {
+            Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber
+        }
     }
     Else {
-        Write-Host ('Connecting to Security & Compliance Center ..')
-        $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-    }
-    If ( $global:myOffice365Services['SessionCC'] ) {
-        Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber
+        Write-Error -Message 'Cannot connect to Security & Compliance Center - module not installed or not loading.'
     }
 }
 
 
 function global:Connect-MSTeams {
-    If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-    Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
-    Connect-MicrosoftTeams -AccountId ($global:myOffice365Services['Office365Credentials']).UserName -TenantId $global:myOffice365Services['TenantId']
+    If ( !(Get-Module -Name MicrosoftTeams)) {Import-Module -Name MicrosoftTeams -ErrorAction SilentlyContinue}
+    If ( Get-Module -Name MicrosoftTeams) {
+        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
+        Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].username)
+        Connect-MicrosoftTeams -AccountId ($global:myOffice365Services['Office365Credentials']).UserName -TenantId $global:myOffice365Services['TenantId']
+    }
+    Else {
+        Write-Error -Message 'Cannot connect to Microsoft Teams - module not installed or not loading.'
+    }
 }
 
 function global:Connect-AIP {
@@ -825,13 +857,13 @@ function global:Connect-AIP {
         Connect-AipService -Credential $global:myOffice365Services['Office365Credentials']
     }
     Else {
-        Write-Error -Message 'Cannot connect to Azure Information Protection - problem loading module.'
+        Write-Error -Message 'Cannot connect to Azure Information Protection - module not installed or not loading.'
     }
 }
-
 function global:Connect-SharePointOnline {
-    If ( !(Get-Module -Name Microsoft.Online.Sharepoint.PowerShell)) {Import-Module -Name Microsoft.Online.Sharepoint.PowerShell -ErrorAction SilentlyContinue}
-    If ( Get-Module -Name Microsoft.Online.Sharepoint.PowerShell) {
+    If ( !(Get-Module -Name Microsoft.Online.SharePoint.PowerShell)) {Import-Module -Name Microsoft.Online.SharePoint.PowerShell -ErrorAction SilentlyContinue}
+    If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
+        Import-Module -Name Microsoft.Online.Sharepoint.PowerShell -ErrorAction Stop
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         If (($global:myOffice365Services['Office365Credentials']).username -like '*.onmicrosoft.com') {
             $global:myOffice365Services['Office365Tenant'] = ($global:myOffice365Services['Office365Credentials']).username.Substring(($global:myOffice365Services['Office365Credentials']).username.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
@@ -847,7 +879,7 @@ function global:Connect-SharePointOnline {
         Connect-SPOService @Parms
     }
     Else {
-        Write-Error -Message 'Cannot connect to SharePoint Online - problem loading module.'
+        Write-Error -Message 'Cannot connect to SharePoint Online - module not installed or not loading.'
     }
 }
 function global:Connect-PowerApps {
