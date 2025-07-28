@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.44, July 10th, 2025
+    Version 3.45, July 22th, 2025
 
     Get latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -34,7 +34,7 @@
     - Connect-ExchangeOnline        Connects to Exchange Online (Graph module)
     - Connect-AIP                   Connects to Azure Information Protection
     - Connect-PowerApps             Connects to PowerApps
-    - Connect-ComplianceCenter      Connects to Compliance Center
+    - Connect-IPPSSession           Connects to Compliance Center
     - Connect-SharePointOnline      Connects to SharePoint Online
     - Connect-MSTeams               Connects to Microsoft Teams
     - Get-Office365Credentials      Gets Office 365 credentials
@@ -356,10 +356,14 @@
     3.43    Fixed Connect-ExchangeOnline
     3.44    Minor cosmetic changes
             Added Quote of the Day like message
+    3.45    Fixed Connect-IPPSSession
+            Corrected Connect-ComplianceCenter references, changed to Connect-IPPSSession
+            Some cosmetic changes
+            Removed redundant module check/import pairs
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.44'
+$local:ScriptVersion= '3.45'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -790,7 +794,7 @@ function global:Connect-ExchangeOnline {
         }
     }
 
-    If ( !(Get-Module -Name ExchangeOnlineManagement)) {Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue}
+    Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue
     If ( Get-Module -Name ExchangeOnlineManagement) {
         $global:myOffice365Services['Session365'] = ExchangeOnlineManagement\Connect-ExchangeOnline @PSBoundParameters
         If ( $global:myOffice365Services['Session365'] ) {
@@ -816,19 +820,11 @@ Function global:Get-ExchangeOnPremisesFQDN {
     $global:myOffice365Services['ExchangeOnPremisesFQDN'] = Read-Host -Prompt 'Enter Exchange On-Premises endpoint, e.g. exchange1.contoso.com'
 }
 
-function global:Connect-IPPSession {
-    If ( !(Get-Module -Name ExchangeOnlineManagement)) {Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue}
+function global:Connect-IPPSSession {
+    Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue
     If ( Get-Module -Name ExchangeOnlineManagement) {
-        If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        If ( $global:myOffice365Services['Office365Credentials']) {
-            Write-Host ('Connecting to Security & Compliance Center using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
-            $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-        }
-        Else {
-            Write-Host ('Connecting to Security & Compliance Center ..')
-            Import-Module -Name ExchangeOnlineManagement -ErrorAction Stop
-            $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUrl $global:myOffice365Services['SCCConnectionEndpointUri'] -Credential $global:myOffice365Services['Office365Credentials'] -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
-        }
+        Write-Host ('Connecting to Security & Compliance Center ..')
+        $global:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $global:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($global:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $global:myOffice365Services['SessionExchangeOptions']
         If ( $global:myOffice365Services['SessionCC'] ) {
             Import-PSSession -Session $global:myOffice365Services['SessionCC'] -AllowClobber
         }
@@ -840,7 +836,7 @@ function global:Connect-IPPSession {
 
 
 function global:Connect-MSTeams {
-    If ( !(Get-Module -Name MicrosoftTeams)) {Import-Module -Name MicrosoftTeams -ErrorAction SilentlyContinue}
+    Import-Module -Name MicrosoftTeams -ErrorAction SilentlyContinue
     If ( Get-Module -Name MicrosoftTeams) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         Write-Host ('Connecting to Microsoft Teams using {0} ..' -f $global:myOffice365Services['Office365Credentials'].UserName)
@@ -852,7 +848,7 @@ function global:Connect-MSTeams {
 }
 
 function global:Connect-AIP {
-    If ( !(Get-Module -Name AIPService)) {Import-Module -Name AIPService -ErrorAction SilentlyContinue}
+    Import-Module -Name AIPService -ErrorAction SilentlyContinue
     If ( Get-Module -Name AIPService) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         Write-Host ('Connecting to Azure Information Protection using {0}' -f $global:myOffice365Services['Office365Credentials'].UserName)
@@ -863,7 +859,7 @@ function global:Connect-AIP {
     }
 }
 function global:Connect-SharePointOnline {
-    If ( !(Get-Module -Name Microsoft.Online.SharePoint.PowerShell)) {Import-Module -Name Microsoft.Online.SharePoint.PowerShell -ErrorAction SilentlyContinue}
+    Import-Module -Name Microsoft.Online.SharePoint.PowerShell -ErrorAction SilentlyContinue
     If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
         Import-Module -Name Microsoft.Online.Sharepoint.PowerShell -ErrorAction Stop
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
@@ -885,8 +881,8 @@ function global:Connect-SharePointOnline {
     }
 }
 function global:Connect-PowerApps {
-    If ( !(Get-Module -Name Microsoft.PowerApps.PowerShell)) {Import-Module -Name Microsoft.PowerApps.PowerShell -ErrorAction SilentlyContinue}
-    If ( !(Get-Module -Name Microsoft.PowerApps.Administration.PowerShell)) {Import-Module -Name Microsoft.PowerApps.Administration.PowerShell -ErrorAction SilentlyContinue}
+    Import-Module -Name Microsoft.PowerApps.PowerShell -ErrorAction SilentlyContinue
+    Import-Module -Name Microsoft.PowerApps.Administration.PowerShell -ErrorAction SilentlyContinue
     If ( Get-Module -Name Microsoft.PowerApps.PowerShell) {
         If ( !($global:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
         Write-Host "Connecting to PowerApps using $($global:myOffice365Services['Office365Credentials'].UserName) .."
@@ -1259,7 +1255,7 @@ function global:Connect-Office365 {
     Connect-AzureRMS
     Connect-ExchangeOnline
     Connect-MSTeams
-    Connect-ComplianceCenter
+    Connect-IPPSSession
     Connect-SharePointOnline
 }
 
@@ -1329,13 +1325,13 @@ $local:Functions | ForEach-Object -Process {
 
 #Get random text
 $local:Quotes= @(
-    'You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.',
-    'You wake up. The room is spinning very gently round your head. Or at least it would be if you could see it which you can''t. It is pitch black.',
-    'You are in a comfortable tunnel like hall. To the east there is the round green door.',
-    'You are standing at the end of a road before a small brick building. Around you is a forest. A small stream flows out of the building and down a gully.',
-    'SHALL WE PLAY A GAME?',
-    'REQUEST ACCESS TO CLU PROGRAM',
-    'You are in a clearing, with a forest surrounding you on all sides. A path leads north.'
+    "You are standing in an open field west of a white house, with a boarded front door. There is a small mailbox here.",
+    "You wake up. The room is spinning very gently round your head.`nOr at least it would be if you could see it which you can't. It is pitch black.",
+    "You are in a comfortable tunnel like hall. To the east there is the round green door.",
+    "You are standing at the end of a road before a small brick building. Around you is a forest.`nA small stream flows out of the building and down a gully.",
+    "Shall we play a game?",
+    "Request access to CLU program.",
+    "You are in a clearing, with a forest surrounding you on all sides. A path leads north."
 )
 Write-Host ( '{0}{1}' -f [System.Environment]::NewLine, ($local:Quotes | Get-Random))
 
