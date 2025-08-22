@@ -1,15 +1,13 @@
 # Connect-Office365Services
 
 PowerShell script defining functions to connect to Office 365 online services
-or Exchange On-Premises. Call manually or alternatively embed or call from $profile
-(Shell or ISE) to make functions available in your session. If loaded from
-PowerShell_ISE, menu items are defined for the functions. To surpress creation of
-menu items, hold 'Shift' while Powershell ISE loads.
+or Exchange On-Premises.
 
 ## Getting Started
 
 After execution, the following helper functions will be available:
 
+* Select-Office365Modules          (Un)install Office 365 powershell modules
 * Connect-AzureActiveDirectory	    Connects to Azure Active Directory
 * Connect-AzureRMS           	    Connects to Azure Rights Management
 * Connect-ExchangeOnline     	    Connects to Exchange Online
@@ -26,14 +24,14 @@ After execution, the following helper functions will be available:
 
 ### Prerequisites
 
-Script requires PowerShell 3.0 and higher and any modules installed you would like to use for connecting to Office 365 workloads.
+Script requires PowerShell 5.0 and higher and any modules installed you would like to use for connecting to Office 365 workloads.
 
 ### Installing
 
 Call the script ad-hoc, or load from PowerShell profile, e.g.
 
 Store the script in the same location as your profile; default location is
-$ENV:UserProfile\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1)
+$ENV:UserProfile\\Documents\\WindowsPowerShell\\Microsoft.PowerShell\_profile.ps1)
 
 Then, create a PowerShell profile when you have not done so yet:
 
@@ -41,9 +39,9 @@ notepad $Profile
 
 and insert a line to load the script (making helper functions available):
 
-& (Join-Path $PSScriptRoot "Connect-Office365Services.ps1")
+\& (Join-Path $PSScriptRoot "Connect-Office365Services.ps1")
 
-Next time you open PowerShell, the script should load. 
+Next time you open PowerShell, the script should load.
 
 ## Contributing
 
@@ -55,7 +53,7 @@ Initial version published on GitHub is 1.84. Changelog is contained in the scrip
 
 ## Authors
 
-* Michel de Rooij [initial work] https://github.com/michelderooij
+* Michel de Rooij \[initial work] https://github.com/michelderooij
 
 ## License
 
@@ -64,4 +62,4 @@ This project is licensed under the MIT License - see the LICENSE.md for details.
 ## Acknowledgments
 
 N/A
- 
+
