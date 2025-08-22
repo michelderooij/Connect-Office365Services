@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.46, August 6th, 2025
+    Version 3.5, August 22th, 2025
 
     Get the latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -363,10 +363,14 @@
     3.46    Changed module check before import to catch issues
             Small cleanup Connect-SPO
             Small textual corrections in synopsis
+    3.50    Added Select-Office365Modules
+            Report-Office365Modules only reports on installed modules
+            Changed Install-MyModule to accommodate Select-Office365Modules
 #>
 
 #Requires -Version 5.0
-$local:ScriptVersion= '3.46'
+
+$local:ScriptVersion = '3.50'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -443,10 +447,20 @@ Function global:Uninstall-myModule {
 
         Try {
             If( $global:myOffice365Services['PSResourceGet']) {
-                Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+                If( $Version -eq 'All') {
+                    Uninstall-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+                }
+                Else {
+                    Uninstall-PSResource -Name $Name -Version [string]$Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+                }
             }
             Else {
-                Uninstall-Module -Name $Name -RequiredVersion [string]$Version  -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force
+                If( $Version -eq 'All') {
+                    Uninstall-Module -Name $Name -AllVersions  -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force:$AllVersions
+                }
+                Else {
+                    Uninstall-Module -Name $Name -RequiredVersion [string]$Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force:$AllVersions
+                }
             }
         }
         Catch {
@@ -481,10 +495,10 @@ Function global:Install-myModule {
     )
     Process {
         If( $global:myOffice365Services['PSResourceGet']) {
-            Install-PSResource -Name $Name -AllowPrerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope']
+            Install-PSResource -Name $Name -Prerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope'] -NoClobber:(-not $AllowClobber) -Confirm:$false -SkipDependencyCheck:$true -TrustRepository:$true -AcceptLicense:$true
         }
         Else {
-            Install-Module -Name $Name -Force -AllowClobber:$AllowClobber -AllowPrerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope']
+            Install-Module -Name $Name -Force -AllowClobber:$AllowClobber -AllowPrerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope']  -Confirm:$false  -SkipPublisherCheck:$true -AcceptLicense:$true
         }
     }
 }
@@ -542,13 +556,13 @@ function global:Get-Office365ModuleInfo {
     },
     {
         "Module": "AzureAD",
-        "Description": "Azure Active Directory (v2)",
+        "Description": "Azure AD (v2)",
         "Repo": "https://www.powershellgallery.com/packages/azuread",
         "ReplacedBy": "Microsoft.Entra"
     },
     {
         "Module": "AzureADPreview",
-        "Description": "Azure Active Directory (v2 Preview)",
+        "Description": "Azure AD (v2 Preview)",
         "Repo": "https://www.powershellgallery.com/packages/AzureADPreview",
         "ReplacedBy": "Microsoft.Entra"
     },
@@ -667,6 +681,249 @@ function global:Get-Office365ModuleInfo {
         "Repo": "https://www.powershellgallery.com/packages/ORCA"
     }
     ]' | ConvertFrom-Json
+}
+
+function global:Select-Office365Modules {
+    param(
+        [switch]$AllowPrerelease
+    )
+
+    $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+
+    if (-not $local:IsAdmin) {
+        Write-Warning 'Script not running with elevated privileges; AllUsers scoped module management might fail'
+    }
+    Write-Host ''
+
+    $local:ModuleInfo = Get-Office365ModuleInfo
+    $local:CurrentSelection = @{}
+    $local:SelectedIndex = 0
+
+    # Initialize current selection based on installed modules
+    foreach ($module in $local:ModuleInfo) {
+        $installedModule = Get-myModule -Name $module.Module -ListAvailable |
+            Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } |
+            Select-Object -First 1
+        $local:CurrentSelection[$module.Module] = $null -ne $installedModule
+    }
+
+    function Show-ModuleMenu {
+        param($ModuleInfo, $CurrentSelection, $SelectedIndex, $maxColumns, $ColumnSpacing)
+
+        $screenWidth = $Host.UI.RawUI.WindowSize.Width
+        $columnWidth = [Math]::Floor(($screenWidth - $columnSpacing) / $maxColumns)
+
+        $maxRows = [Math]::Ceiling($ModuleInfo.Count / $maxColumns)
+
+        for ($row = 0; $row -lt $maxRows; $row++) {
+            for ($col = 0; $col -lt $maxColumns; $col++) {
+                $i = $row * $maxColumns + $col
+
+                if ($i -lt $ModuleInfo.Count) {
+                    $module = $ModuleInfo[$i]
+                    $isSelected = $CurrentSelection[$module.Module]
+                    $checkbox = if ($isSelected) { "[*]" } else { "[ ]" }
+                    $prefix = if ($i -eq $SelectedIndex) { ">" } else { " " }
+
+                    $line = "{0} {1} {2}" -f $prefix, $checkbox, $module.Description
+
+                    if ($module.ReplacedBy) {
+                        $line += " [Replaced by $($module.ReplacedBy)]"
+                    }
+
+                    if ($line.Length -gt ($columnWidth - 2)) {
+                        $line = $line.Substring(0, $columnWidth - 4) + ".."
+                    }
+
+                    $line = $line.PadRight($columnWidth)
+
+                    if ($i -eq $SelectedIndex) {
+                        Write-Host $line -ForegroundColor $Host.PrivateData.VerboseForegroundColor -BackgroundColor $Host.PrivateData.VerboseBackgroundColor -NoNewline
+                    } else {
+                        if ($isSelected) {
+                            Write-Host $line -ForegroundColor $Host.PrivateData.FormatAccentColor -NoNewline
+                        } else {
+                            Write-Host $line -ForegroundColor $Host.UI.RawUI.ForegroundColor -NoNewline
+                        }
+                    }
+                } else {
+                    # Empty space for column alignment
+                    Write-Host (" " * $columnWidth) -NoNewline
+                }
+
+                # Add spacing between columns (except for the last column)
+                if ($col -lt ($maxColumns - 1)) {
+                    Write-Host (" " * $columnSpacing) -NoNewline
+                }
+            }
+            Write-Host ''
+        }
+        Write-Host ''
+        Write-Host "Current Scope: $($global:myOffice365Services['Scope'])"
+        Write-Host '[Up/Down/Left/Right] Navigate, [Space] Toggle, [S] Scope, [Enter] Commit, [Esc] Cancel'
+    }
+
+    # Helper function to determine which column and row an index is in
+    function Get-ColumnPosition {
+        param($Index, $ModuleCount, $MaxColumns)
+        if ($Index -ge $ModuleCount -or $Index -lt 0) {
+            return @{ Column = 0; Row = 0 }
+        }
+
+        # Calculate position in 2-column row-major layout
+        $row = [Math]::Floor($Index / $MaxColumns)
+        $column = $Index % $MaxColumns
+        return @{ Column = $column; Row = $row }
+    }
+
+    # Helper function to get index from column and row
+    function Get-IndexFromPosition {
+        param($Column, $Row, $ModuleCount, $MaxColumns)
+
+        # Ensure column is within bounds (0 or 1 for 2 columns)
+        $Column = [Math]::Max(0, [Math]::Min($Column, $MaxColumns - 1))
+        $Row = [Math]::Max(0, $Row)
+
+        # Calculate the index based on row-major layout
+        $index = $Row * $MaxColumns + $Column
+
+        # Ensure the index doesn't exceed the module count
+        if ($index -ge $ModuleCount) {
+            # If we're beyond the last module, stay at the last valid index
+            $index = $ModuleCount - 1
+        }
+
+        return [Math]::Max(0, [Math]::Min($index, $ModuleCount - 1))
+    }
+
+    $exitMenu = $false
+    $committed = $false
+
+    $maxColumns = 2
+    $columnSpacing= 2
+    $maxRows= [Math]::Ceiling($ModuleInfo.Count / $maxColumns)
+
+    # Fill estate where menu gets be displayed, to avoid bottom of console calculation challenges
+    1.. ($maxRows + 3) | ForEach-Object { Write-Host ''}
+    $menuTopY= [Console]::get_CursorTop() - $maxRows - 3
+
+    while (-not $exitMenu) {
+
+        [Console]::SetCursorPosition( [Console]::get_CursorLeft(), $menuTopY)
+        Show-ModuleMenu -ModuleInfo $local:ModuleInfo -CurrentSelection $local:CurrentSelection -SelectedIndex $local:SelectedIndex -maxColumns $maxColumns -ColumnSpacing $columnSpacing
+
+        $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+        switch ($key.VirtualKeyCode) {
+            38 { # Up arrow
+                $currentPos = Get-ColumnPosition -Index $local:SelectedIndex -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                $newRow = [Math]::Max(0, $currentPos.Row - 1)
+                $newIndex = Get-IndexFromPosition -Column $currentPos.Column -Row $newRow -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                $local:SelectedIndex = $newIndex
+            }
+            40 { # Down arrow
+                $currentPos = Get-ColumnPosition -Index $local:SelectedIndex -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                $newRow = $currentPos.Row + 1
+                $newIndex = Get-IndexFromPosition -Column $currentPos.Column -Row $newRow -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                # Only move if the new index is valid and different
+                if ($newIndex -lt $local:ModuleInfo.Count -and $newIndex -ne $local:SelectedIndex) {
+                    $local:SelectedIndex = $newIndex
+                }
+            }
+            37 { # Left arrow
+                $currentPos = Get-ColumnPosition -Index $local:SelectedIndex -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                $newColumn = [Math]::Max(0, $currentPos.Column - 1)
+                $newIndex = Get-IndexFromPosition -Column $newColumn -Row $currentPos.Row -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                if ($newIndex -lt $local:ModuleInfo.Count) {
+                    $local:SelectedIndex = $newIndex
+                }
+            }
+            39 { # Right arrow
+                $currentPos = Get-ColumnPosition -Index $local:SelectedIndex -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                $newColumn = [Math]::Min($maxColumns - 1, $currentPos.Column + 1)
+                $newIndex = Get-IndexFromPosition -Column $newColumn -Row $currentPos.Row -ModuleCount $local:ModuleInfo.Count -MaxColumns $maxColumns
+                if ($newIndex -lt $local:ModuleInfo.Count) {
+                    $local:SelectedIndex = $newIndex
+                }
+            }
+            32 { # Spacebar
+                if ($local:SelectedIndex -ge 0 -and $local:SelectedIndex -lt $local:ModuleInfo.Count) {
+                    $currentModule = $local:ModuleInfo[$local:SelectedIndex].Module
+                    $local:CurrentSelection[$currentModule] = -not $local:CurrentSelection[$currentModule]
+                }
+            }
+            83 { # S key - Toggle scope
+                if ($global:myOffice365Services['Scope'] -eq 'AllUsers') {
+                    $global:myOffice365Services['Scope'] = 'CurrentUser'
+                } else {
+                    $global:myOffice365Services['Scope'] = 'AllUsers'
+                }
+            }
+            13 { # Enter
+                $exitMenu = $true
+                $committed = $true
+            }
+            27 { # Escape
+                $exitMenu = $true
+                $committed = $false
+            }
+        }
+    }
+
+    if (-not $committed) {
+        # Operation cancelled
+        Return
+    }
+
+    $modulesToInstall = [System.Collections.ArrayList]@()
+    $modulesToUninstall = [System.Collections.ArrayList]@()
+
+    foreach ($module in $local:ModuleInfo) {
+        $moduleName = $module.Module
+        $shouldBeInstalled = $local:CurrentSelection[$moduleName]
+
+        $installedModule = Get-myModule -Name $moduleName -ListAvailable -All | Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } | Select-Object -First 1
+        $isCurrentlyInstalled = $null -ne $installedModule
+
+        if ($shouldBeInstalled -and -not $isCurrentlyInstalled) {
+            $modulesToInstall.Add( $module) | Out-Null
+        }
+        else {
+            if (-not $shouldBeInstalled -and $isCurrentlyInstalled) {
+                $modulesToUninstall.Add( $module) | Out-Null
+            }
+        }
+    }
+
+    # Install selected modules
+    foreach ($module in $modulesToInstall) {
+        Write-Host ('Installing {0}' -f $module.Description)
+        try {
+            Install-myModule -Name $module.Module -AllowPrerelease:$AllowPrerelease -AllowClobber
+            $allVersions = Get-myModule -Name $module.Module -ListAvailable -All | Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } | Select-Object -First 1
+            if ($allVersions) {
+                Write-Host ('Installed {0} v{1}' -f $allVersions.Name, $allVersions.Version) -ForegroundColor Green
+            }
+        }
+        catch {
+            Write-Error ('Failed to install {0}: {1}' -f $module.Name, $_.Exception.Message)
+        }
+    }
+
+    # Uninstall deselected modules
+    foreach ($module in $modulesToUninstall) {
+        try {
+            Write-Host ('Uninstalling {0}' -f $module.module) -ForegroundColor White
+            Uninstall-myModule -Name $module.module -Version 'All' -IsPrerelease:$module.IsPrerelease
+        }
+        catch {
+            Write-Error ('Failed to uninstall {0}: {1}' -f $module.Name, $_.Exception.Message)
+        }
+    }
+
+    if ($modulesToInstall.Count -eq 0 -and $modulesToUninstall.Count -eq 0) {
+        Write-Host "No changes were made."
+    }
 }
 
 function global:Set-Office365Environment {
@@ -1077,7 +1334,7 @@ Function global:Update-Office365Modules {
         }
     }
     Else {
-        Write-Warning ('Script not running with elevated privileges; cannot update modules')
+        Write-Warning ('Script not running with elevated privileges; module management might fail')
     }
 }
 
@@ -1234,19 +1491,19 @@ Function global:Report-Office365Modules {
         If( $local:Module) {
 
             $local:Version = Get-ModuleVersionInfo -Module $local:Module
-            Write-Host ('{0}: Local v{1}' -f $local:Item.Description, $Local:Version) -NoNewline
+            Write-Host ('{0}: Local v{1}' -f $local:Item.Description, $Local:Version) -NoNewline -ForegroundColor Gray
             $OnlineModule = Find-myModule -Name $local:Item.Module -ErrorAction SilentlyContinue
 
             If( $OnlineModule) {
-                Write-Host (', Online v{0}' -f $OnlineModule.version) -NoNewline
+                Write-Host (', Online v{0}' -f $OnlineModule.version) -NoNewline -ForegroundColor Gray
             }
             Else {
-                Write-Host (', Online N/A') -NoNewline
+                Write-Host (', Online N/A') -NoNewline -ForegroundColor Gray
             }
-            Write-Host (', Scope:{0} Status:' -f (Get-ModuleScope -Module $local:Module)) -NoNewline
+            Write-Host (', Scope:{0} Status:' -f (Get-ModuleScope -Module $local:Module)) -NoNewline -ForegroundColor Gray
 
             If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $OnlineModule.version)) {
-                Write-Host ('Unknown')
+                Write-Host ('Unknown') -ForegroundColor Yellow
             }
             Else {
                 If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $OnlineModule.version) -eq 1) {
@@ -1257,11 +1514,11 @@ Function global:Report-Office365Modules {
                 }
             }
             If( $local:Item.ReplacedBy) {
-                Write-Warning ('{0} has been replaced by {1}' -f $local:Item.Module, $local:Item.ReplacedBy)
+                Write-Warning ('{0} has been replaced by {1}' -f $local:Item.Module, $local:Item.ReplacedBy) -ForegroundColor Yellow
             }
         }
         Else {
-            Write-Host ('{0} not found ({1})' -f $local:Item.Description, $local:Item.Repo) -ForegroundColor DarkGray
+            # Module not installed
         }
     }
 }
