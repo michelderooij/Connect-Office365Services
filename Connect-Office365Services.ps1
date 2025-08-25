@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.5, August 22th, 2025
+    Version 3.51, August 25th, 2025
 
     Get the latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -366,11 +366,12 @@
     3.50    Added Select-Office365Modules
             Report-Office365Modules only reports on installed modules
             Changed Install-MyModule to accommodate Select-Office365Modules
+    3.51    Fixed version argument issue when removing modules
 #>
 
 #Requires -Version 5.0
 
-$local:ScriptVersion = '3.50'
+$local:ScriptVersion = '3.51'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -422,6 +423,9 @@ Function global:Update-myModule {
         [string[]]$Name
     )
     Process {
+        # Unload module if loaded
+        Remove-Module -Name $Name -Force -ErrorAction SilentlyContinue
+
         If( $global:myOffice365Services['PSResourceGet']) {
             Update-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -Force -AcceptLicense:$true -Prerelease:$global:myOffice365Services['AllowPrerelease']
         }
@@ -437,12 +441,12 @@ Function global:Uninstall-myModule {
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
         [string]$Name,
         [Parameter(Mandatory=$true, ValueFromPipeline=$true)]
-        $Version,
+        [string]$Version='All',
         [switch]$IsPrerelease
         )
     Process {
 
-        # Unload module if needed
+        # Unload module if loaded
         Remove-Module -Name $Name -Force -ErrorAction SilentlyContinue
 
         Try {
@@ -451,7 +455,7 @@ Function global:Uninstall-myModule {
                     Uninstall-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
                 }
                 Else {
-                    Uninstall-PSResource -Name $Name -Version [string]$Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+                    Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
                 }
             }
             Else {
@@ -1365,7 +1369,7 @@ Function global:Clean-Office365Modules {
                 $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
                 If( $local:OldModules) {
 
-                    Write-Host ('previous versions found')
+                    Write-Host ('Previous versions found:')
 
                     ForEach( $OldModule in $local:OldModules) {
 
