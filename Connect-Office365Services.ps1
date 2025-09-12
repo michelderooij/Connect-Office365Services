@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.51, August 25th, 2025
+    Version 3.52, August 25th, 2025
 
     Get the latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -46,6 +46,7 @@
     - Update-Office365Modules       Updates supported Office 365 modules
     - Report-Office365Modules       Report on known vs online module versions
     - Clean-Office365Modules        Cleanup old versions of supported modules
+    - Select-Office365Modules       Interactive module (un)installation menu
 
     Functions to connect to other services provided by the module, e.g. Connect-MSGraph or Connect-MSTeams.
 
@@ -367,11 +368,12 @@
             Report-Office365Modules only reports on installed modules
             Changed Install-MyModule to accommodate Select-Office365Modules
     3.51    Fixed version argument issue when removing modules
+    3.52    Cleanup-Office365Modules will not consider AllUsers & CurrentUser
 #>
 
 #Requires -Version 5.0
 
-$local:ScriptVersion = '3.51'
+$local:ScriptVersion = '3.52'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -388,14 +390,25 @@ Function global:Get-myModule {
         [Parameter(Mandatory=$false, ValueFromPipeline=$true)]
         [string[]]$Name,
         [switch]$ListAvailable,
-        [switch]$AllowPrerelease
+        [switch]$AllowPrerelease,
+        [switch]$AllScopes
     )
     Process {
-        If( $global:myOffice365Services['PSResourceGet']) {
-            Get-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -ErrorAction SilentlyContinue
+        If( $AllScopes) {
+            If( $global:myOffice365Services['PSResourceGet']) {
+                Get-PSResource -Name $Name -Scope AllUsers,CurrentUser -ErrorAction SilentlyContinue
+            }
+            Else {
+                Get-Module -Name $Name -ListAvailable:$ListAvailable -All -Refresh -ErrorAction SilentlyContinue | Sort Path -Unique
+            }
         }
         Else {
-            Get-Module -Name $Name -ListAvailable:$ListAvailable -ErrorAction SilentlyContinue
+            If( $global:myOffice365Services['PSResourceGet']) {
+                Get-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -ErrorAction SilentlyContinue
+            }
+            Else {
+                Get-Module -Name $Name -ListAvailable:$ListAvailable -Refresh -ErrorAction SilentlyContinue
+            }
         }
     }
 }
@@ -886,7 +899,7 @@ function global:Select-Office365Modules {
         $moduleName = $module.Module
         $shouldBeInstalled = $local:CurrentSelection[$moduleName]
 
-        $installedModule = Get-myModule -Name $moduleName -ListAvailable -All | Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } | Select-Object -First 1
+        $installedModule = Get-myModule -Name $moduleName -ListAvailable | Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } | Select-Object -First 1
         $isCurrentlyInstalled = $null -ne $installedModule
 
         if ($shouldBeInstalled -and -not $isCurrentlyInstalled) {
@@ -904,7 +917,7 @@ function global:Select-Office365Modules {
         Write-Host ('Installing {0}' -f $module.Description)
         try {
             Install-myModule -Name $module.Module -AllowPrerelease:$AllowPrerelease -AllowClobber
-            $allVersions = Get-myModule -Name $module.Module -ListAvailable -All | Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } | Select-Object -First 1
+            $allVersions = Get-myModule -Name $module.Module -ListAvailable | Where-Object { ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } | Select-Object -First 1
             if ($allVersions) {
                 Write-Host ('Installed {0} v{1}' -f $allVersions.Name, $allVersions.Version) -ForegroundColor Green
             }
@@ -1285,7 +1298,7 @@ Function global:Update-Office365Modules {
 
                     If( $local:UpdateSuccess) {
 
-                        $local:ModuleVersions= Get-myModule -Name $local:Item.Module -ListAvailable -All
+                        $local:ModuleVersions= Get-myModule -Name $local:Item.Module -ListAvailable 
 
                         $local:Module = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                         $local:LatestVersion = ($local:Module).Version
@@ -1362,14 +1375,14 @@ Function global:Clean-Office365Modules {
             If( $local:Module) {
                 Write-Host ('Checking {0} .. ' -f $local:Item.Description) -NoNewline
 
-                $local:ModuleVersions= Get-myModule -Name $local:Item.Module -ListAvailable -All  -ErrorAction SilentlyContinue
+                $local:ModuleVersions= Get-myModule -Name $local:Item.Module -ListAvailable -AllScopes -ErrorAction SilentlyContinue
                 $local:LatestModule = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                 $local:LatestVersion = ($local:LatestModule).Version
 
                 $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
                 If( $local:OldModules) {
 
-                    Write-Host ('Previous versions found:')
+                    Write-Host ('Previous versions found') -ForegroundColor Yellow
 
                     ForEach( $OldModule in $local:OldModules) {
 
@@ -1394,7 +1407,7 @@ Function global:Clean-Office365Modules {
 
                     Write-Host ('Checking {0} .. ' -f $RequiredModule.Name) -NoNewline
 
-                    $local:ModuleVersions= Get-myModule -Name $RequiredModule.Name -ListAvailable -ErrorAction SilentlyContinue
+                    $local:ModuleVersions= Get-myModule -Name $RequiredModule.Name -ListAvailable -AllScopes -ErrorAction SilentlyContinue
                     $local:LatestModule = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                     $local:LatestVersion = ($local:LatestModule).Version
 
