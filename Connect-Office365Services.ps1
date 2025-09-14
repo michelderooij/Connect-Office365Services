@@ -944,7 +944,6 @@ function global:Select-Office365Modules {
                 }
             }
         }
-return
         try {
             Write-Host ('Uninstalling {0}' -f $module.module) -ForegroundColor White
             Uninstall-myModule -Name $module.module -Version 'All' -IsPrerelease:$module.IsPrerelease
