@@ -515,7 +515,7 @@ Function global:Install-myModule {
     )
     Process {
         If( $global:myOffice365Services['PSResourceGet']) {
-            Install-PSResource -Name $Name -Prerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope'] -NoClobber:(-not $AllowClobber) -Confirm:$false -TrustRepository:$true -AcceptLicense:$true
+            Install-PSResource -Name $Name -Prerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope'] -NoClobber:(-not $AllowClobber) -Confirm:$false -TrustRepository:$true -AcceptLicense:$true -Reinstall:$true
         }
         Else {
             Install-Module -Name $Name -Force -AllowClobber:$AllowClobber -AllowPrerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope']  -Confirm:$false  -SkipPublisherCheck:$true -AcceptLicense:$true
