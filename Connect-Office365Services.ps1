@@ -932,7 +932,7 @@ function global:Select-Office365Modules {
 
     # Uninstall deselected modules
     foreach ($module in $modulesToUninstall) {
-        $requiredModules= (Get-myModule -Name module.Module -ListAvailable ).RequiredModules | Sort-Object -Unique Name
+        $requiredModules= (Get-myModule -Name module.Module -ListAvailable ).Dependencies | Sort-Object -Unique Name
         If( $requiredModules) {
             ForEach( $reqModule in $requiredModules) {
                 try {
