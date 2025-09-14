@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.53, September 14th, 2025
+    Version 3.54, September 14th, 2025
 
     Get the latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -369,13 +369,14 @@
             Changed Install-MyModule to accommodate Select-Office365Modules
     3.51    Fixed version argument issue when removing modules
     3.52    Cleanup-Office365Modules will not consider AllUsers & CurrentUser
-    3.53    Removed dependency check when installing selected modules so it will install dependencies (eg Graph.*)
+    3.53    Removed dependency check when installing modules so it will install dependencies (eg Graph.*)
             Bumped required PowerShell version to 5.1
+    3.54    Removed dependency check when uninstalling modules
 #>
 
 #Requires -Version 5.1
 
-$local:ScriptVersion = '3.53'
+$local:ScriptVersion = '3.54'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -470,15 +471,15 @@ Function global:Uninstall-myModule {
                     Uninstall-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
                 }
                 Else {
-                    Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+                    Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -Prerelease:$IsPrerelease
                 }
             }
             Else {
                 If( $Version -eq 'All') {
-                    Uninstall-Module -Name $Name -AllVersions  -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force:$AllVersions
+                    Uninstall-Module -Name $Name -AllVersions  -Scope $global:myOffice365Services['Scope'] -AllowPrerelease:$IsPrerelease -Force:$AllVersions
                 }
                 Else {
-                    Uninstall-Module -Name $Name -RequiredVersion [string]$Version -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -AllowPrerelease:$IsPrerelease -Force:$AllVersions
+                    Uninstall-Module -Name $Name -RequiredVersion [string]$Version -Scope $global:myOffice365Services['Scope'] -AllowPrerelease:$IsPrerelease -Force:$AllVersions
                 }
             }
         }
