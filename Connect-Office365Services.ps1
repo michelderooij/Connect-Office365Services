@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.52, August 25th, 2025
+    Version 3.53, September 14th, 2025
 
     Get the latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -369,11 +369,13 @@
             Changed Install-MyModule to accommodate Select-Office365Modules
     3.51    Fixed version argument issue when removing modules
     3.52    Cleanup-Office365Modules will not consider AllUsers & CurrentUser
+    3.53    Removed dependency check when installing selected modules so it will install dependencies (eg Graph.*)
+            Bumped required PowerShell version to 5.1
 #>
 
-#Requires -Version 5.0
+#Requires -Version 5.1
 
-$local:ScriptVersion = '3.52'
+$local:ScriptVersion = '3.53'
 
 Function global:Get-myPSResourceGetInstalled {
     If( $global:myOffice365Services['PSResourceGet']) {
@@ -512,7 +514,7 @@ Function global:Install-myModule {
     )
     Process {
         If( $global:myOffice365Services['PSResourceGet']) {
-            Install-PSResource -Name $Name -Prerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope'] -NoClobber:(-not $AllowClobber) -Confirm:$false -SkipDependencyCheck:$true -TrustRepository:$true -AcceptLicense:$true
+            Install-PSResource -Name $Name -Prerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope'] -NoClobber:(-not $AllowClobber) -Confirm:$false -TrustRepository:$true -AcceptLicense:$true
         }
         Else {
             Install-Module -Name $Name -Force -AllowClobber:$AllowClobber -AllowPrerelease:$AllowPrerelease -Scope $global:myOffice365Services['Scope']  -Confirm:$false  -SkipPublisherCheck:$true -AcceptLicense:$true
