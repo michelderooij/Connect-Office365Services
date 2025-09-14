@@ -371,7 +371,7 @@
     3.52    Cleanup-Office365Modules will not consider AllUsers & CurrentUser
     3.53    Removed dependency check when installing modules so it will install dependencies (eg Graph.*)
             Bumped required PowerShell version to 5.1
-    3.54    Removed dependency check when uninstalling modules
+    3.54    Fixed uninstalling dependencies when uninstalling deselected modules
 #>
 
 #Requires -Version 5.1
@@ -932,6 +932,18 @@ function global:Select-Office365Modules {
 
     # Uninstall deselected modules
     foreach ($module in $modulesToUninstall) {
+        $requiredModules= (Get-myModule -Name module.Module -ListAvailable ).RequiredModules | Sort-Object -Unique Name
+        If( $requiredModules) {
+            ForEach( $reqModule in $requiredModules) {
+                try {
+                    Write-Host ('Uninstalling dependency {0}' -f $reqmodule.module) -ForegroundColor White
+                    Uninstall-myModule -Name $reqmodule.module -Version 'All' -IsPrerelease:$reqmodule.IsPrerelease
+                }
+                catch {
+                    Write-Error ('Failed to uninstall {0}: {1}' -f $reqmodule.Name, $_.Exception.Message)
+                }
+            }
+        }
         try {
             Write-Host ('Uninstalling {0}' -f $module.module) -ForegroundColor White
             Uninstall-myModule -Name $module.module -Version 'All' -IsPrerelease:$module.IsPrerelease
