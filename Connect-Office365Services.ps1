@@ -932,18 +932,19 @@ function global:Select-Office365Modules {
 
     # Uninstall deselected modules
     foreach ($module in $modulesToUninstall) {
-        $requiredModules= (Get-myModule -Name module.Module -ListAvailable ).Dependencies | Sort-Object -Unique Name
+        $requiredModules= (Get-myModule -Name $module.module -ListAvailable | Select-Object -First 1).Dependencies | Sort-Object -Unique Name
         If( $requiredModules) {
             ForEach( $reqModule in $requiredModules) {
                 try {
-                    Write-Host ('Uninstalling dependency {0}' -f $reqmodule.module) -ForegroundColor White
-                    Uninstall-myModule -Name $reqmodule.module -Version 'All' -IsPrerelease:$reqmodule.IsPrerelease
+                    Write-Host ('Uninstalling dependency {0}' -f $reqmodule.Name) -ForegroundColor White
+                    Uninstall-myModule -Name $reqmodule.Name -Version 'All' -IsPrerelease:$reqmodule.IsPrerelease
                 }
                 catch {
                     Write-Error ('Failed to uninstall {0}: {1}' -f $reqmodule.Name, $_.Exception.Message)
                 }
             }
         }
+return
         try {
             Write-Host ('Uninstalling {0}' -f $module.module) -ForegroundColor White
             Uninstall-myModule -Name $module.module -Version 'All' -IsPrerelease:$module.IsPrerelease
