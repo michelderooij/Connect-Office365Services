@@ -12,7 +12,7 @@
     THIS CODE IS MADE AVAILABLE AS IS, WITHOUT WARRANTY OF ANY KIND. THE ENTIRE
     RISK OF THE USE OR THE RESULTS FROM THE USE OF THIS CODE REMAINS WITH THE USER.
 
-    Version 3.54, September 14th, 2025
+    Version 3.55, November 19th, 2025
 
     Get the latest version from GitHub:
     https://github.com/michelderooij/Connect-Office365Services
@@ -372,7 +372,8 @@
     3.53    Removed dependency check when installing modules so it will install dependencies (eg Graph.*)
             Bumped required PowerShell version to 5.1
     3.54    Fixed uninstalling dependencies when uninstalling deselected modules
-#>
+    3.55    Fixed uninstalling dependency order
+    #>
 
 #Requires -Version 5.1
 
@@ -468,18 +469,18 @@ Function global:Uninstall-myModule {
         Try {
             If( $global:myOffice365Services['PSResourceGet']) {
                 If( $Version -eq 'All') {
-                    Uninstall-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease
+                    Uninstall-PSResource -Name $Name -Scope $global:myOffice365Services['Scope'] -SkipDependencyCheck:$true -Prerelease:$IsPrerelease
                 }
                 Else {
-                    Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -Prerelease:$IsPrerelease
+                    Uninstall-PSResource -Name $Name -Version $Version -Scope $global:myOffice365Services['Scope'] -Prerelease:$IsPrerelease -SkipDependencyCheck:$true
                 }
             }
             Else {
                 If( $Version -eq 'All') {
-                    Uninstall-Module -Name $Name -AllVersions  -Scope $global:myOffice365Services['Scope'] -AllowPrerelease:$IsPrerelease -Force:$AllVersions
+                    Uninstall-Module -Name $Name -AllVersions  -Scope $global:myOffice365Services['Scope'] -AllowPrerelease:$IsPrerelease -Force:$AllVersions -SkipDependencyCheck:$true
                 }
                 Else {
-                    Uninstall-Module -Name $Name -RequiredVersion [string]$Version -Scope $global:myOffice365Services['Scope'] -AllowPrerelease:$IsPrerelease -Force:$AllVersions
+                    Uninstall-Module -Name $Name -RequiredVersion [string]$Version -Scope $global:myOffice365Services['Scope'] -AllowPrerelease:$IsPrerelease -Force:$AllVersions -SkipDependencyCheck:$true
                 }
             }
         }
@@ -932,7 +933,8 @@ function global:Select-Office365Modules {
 
     # Uninstall deselected modules
     foreach ($module in $modulesToUninstall) {
-        $requiredModules= (Get-myModule -Name $module.module -ListAvailable | Select-Object -First 1).Dependencies | Sort-Object -Unique Name
+        # Get dependencies and uninstall the 'lowest level' ones first
+        $requiredModules= (Get-myModule -Name $module.module -ListAvailable | Select-Object -First 1).Dependencies |  Sort-Object -Property { ([regex]::Matches( $_.Name, '.')).Count } -Descending
         If( $requiredModules) {
             ForEach( $reqModule in $requiredModules) {
                 try {
@@ -1313,7 +1315,7 @@ Function global:Update-Office365Modules {
 
                     If( $local:UpdateSuccess) {
 
-                        $local:ModuleVersions= Get-myModule -Name $local:Item.Module -ListAvailable 
+                        $local:ModuleVersions= Get-myModule -Name $local:Item.Module -ListAvailable
 
                         $local:Module = $local:ModuleVersions | Sort-Object -Property @{e={ [System.Version]($_.Version -replace '[^\d\.]','')}} -Descending | Select-Object -First 1
                         $local:LatestVersion = ($local:Module).Version
@@ -1429,7 +1431,7 @@ Function global:Clean-Office365Modules {
                     $local:OldModules= $local:ModuleVersions | Where-Object {$_.Version -ne $local:LatestVersion}
                     If( $local:OldModules) {
 
-                        Write-Host ('needs cleanup')
+                        Write-Host ('{0} needs cleanup' -f $OldModule.Name)
 
                         ForEach( $OldModule in $local:OldModules) {
 
