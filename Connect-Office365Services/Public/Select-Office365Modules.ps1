@@ -25,7 +25,7 @@ function Select-Office365Modules {
     )
 
     # Check if running as administrator
-    $local:IsAdmin = [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    $local:IsAdmin = Test-IsAdministrator
     if (-not $local:IsAdmin) {
         Write-Warning 'Script not running with elevated privileges; module installation/uninstallation may fail'
         $continue = Read-Host "Continue anyway? (y/N)"
@@ -43,10 +43,9 @@ function Select-Office365Modules {
     $local:MaxIndex = $local:ModuleInfo.Count - 1
 
     # Initialize current selection based on installed modules
+    $local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
     foreach ($module in $local:ModuleInfo) {
-        $installedModule = Get-Module -Name $module.Module -ListAvailable |
-            Where-Object { $_.RepositorySourceLocation -and ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } |
-            Select-Object -First 1
+        $installedModule = Get-InstalledRepoModule -Name $module.Module -Repo $module.Repo -AllInstalled $local:AllInstalled
         $local:CurrentSelection[$module.Module] = $null -ne $installedModule
     }
 
@@ -54,10 +53,9 @@ function Select-Office365Modules {
     function Show-ModuleMenu {
         param($ModuleInfo, $CurrentSelection, $SelectedIndex)
 
-        Write-Host 'Office 365 Module Selection'
+        Write-Host 'Module Selection'
         Write-Host ('-' * 50)
-        Write-Host ''
-        Write-Host ('Scope: {0,-12}' -f $script:myOffice365Services['Scope'])
+        Write-Host ('Active Scope: {0,-12}' -f $script:myOffice365Services['Scope'])
         Write-Host ''
 
         for ($i = 0; $i -lt $ModuleInfo.Count; $i++) {
@@ -161,14 +159,13 @@ function Select-Office365Modules {
 
     $modulesToInstall   = @()
     $modulesToUninstall = @()
+    $local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
 
     foreach ($module in $local:ModuleInfo) {
         $moduleName          = $module.Module
         $shouldBeInstalled   = $local:CurrentSelection[$moduleName]
 
-        $installedModule = Get-Module -Name $moduleName -ListAvailable |
-            Where-Object { $_.RepositorySourceLocation -and ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority } |
-            Select-Object -First 1
+        $installedModule = Get-InstalledRepoModule -Name $moduleName -Repo $module.Repo -AllInstalled $local:AllInstalled
         $isCurrentlyInstalled = $null -ne $installedModule
 
         if ($shouldBeInstalled -and -not $isCurrentlyInstalled) {

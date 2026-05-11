@@ -24,6 +24,20 @@ function Initialize-ServicesState {
     $script:myOffice365Services['ProxyAccessType'] = [string]$local:prefs['ProxyAccessType']
     $script:myOffice365Services['SessionOptions']  = New-PSSessionOption -ProxyAccessType $local:prefs['ProxyAccessType']
 
+    # Modern auth state (populated by Get-Office365Credential / Get-Office365AccessToken)
+    $script:myOffice365Services['Office365UPN']   = ''
+    $script:myOffice365Services['MsalAccount']    = $null
+    $script:myOffice365Services['MsalApp']        = $null   # PublicClientApplication instance (MSAL.NET)
+    $script:myOffice365Services['MsalNetWarned']  = $false  # suppress repeated "MSAL.NET not found" warnings
+    # Well-known Microsoft Graph Command Line Tools public client — override via Set-Office365ServicesPreferences if needed
+    $script:myOffice365Services['MsalClientId']   = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
+
     # Initialize environment & endpoints
     Set-Office365Environment -Environment $local:prefs['AzureEnvironment']
+
+    # In-session cache for online version lookups (populated by Show/Update; 60-min TTL)
+    # Key: module name (string), Value: PSCustomObject { Version; Fetched }
+    if ($null -eq $script:myOffice365Services['OnlineVersionCache']) {
+        $script:myOffice365Services['OnlineVersionCache'] = @{}
+    }
 }

@@ -1,5 +1,21 @@
 # Changelog
 
+## v4.0.1
+- Fixed: module install path resolved incorrectly on systems with a non-default home drive.
+- Fixed: invalid Exchange On-Premises hostnames are now rejected; prompt repeats until valid.
+- Fixed: tenant ID lookup no longer proceeds when the e-mail address is malformed.
+- Fixed: `Update-Office365Modules` did not detect modules installed in the AllUsers scope.
+- Fixed: `Update-Office365Modules` used the configured scope preference instead of the module's actual install scope.
+- Fixed: update errors were silently swallowed when the update cmdlet emitted non-terminating errors.
+- Fixed: error messages in update output were blank; now show the actual exception text.
+- Fixed: "Updated to version" showed the wrong version after an update.
+- Fixed: `Update-Office365Modules` failed for modules installed via `Install-Module` when PSResourceGet is active; falls back to `Install-PSResource -Reinstall`.
+- Performance: module import faster; installed module list now read from disk only once.
+- Performance: `Show-Office365Modules` and `Update-Office365Modules` run version checks concurrently on PS 7 (~3 s vs ~20 s).
+- Performance: online version info cached for 60 minutes; repeat calls within a session are instant.
+- Added `-Refresh` switch to `Show-Office365Modules` and `Update-Office365Modules` to force a fresh online version check.
+- Get-Office365Credential attempts modern auth using MSAL.NET (Microsoft.Identity.Client) when found, fall back to `PSCredential`
+
 ## v4.0
 - The script has been converted to a proper PowerShell module and published to PowerShell Gallery.
 - Removing old module versions now more reliable.
@@ -18,9 +34,9 @@
 - Select-Office365Modules: replaced two-column layout with a single-column list and no screen clearing.
 - Select-Office365Modules: deprecated modules can only be removed when installed; they cannot be freshly installed.
 - Renamed USGovernment to GCC (Government Community Cloud on worldwide infrastructure) and fixed endpoints
-- Added GCCHigh environment 
+- Added GCCHigh environment
 - added DoD environment (Department of Defense)
-- Updated Germany environment 
+- Updated Germany environment
 
 ## v3.46 
 - Changed module check before import to catch issues

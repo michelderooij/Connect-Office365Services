@@ -1,6 +1,4 @@
 function Get-Office365ModuleInfo {
-    # Fixed: Microsoft365DSC Repo URL corrected (was missing the '5')
-    # Added: DLLPickle entry
     '[
     {
         "Module": "ExchangeOnlineManagement",
@@ -9,7 +7,7 @@ function Get-Office365ModuleInfo {
     },
     {
         "Module": "MSOnline",
-        "Description": "MSOnline",
+        "Description": "Azure Active Directory (v1)",
         "Repo": "https://www.powershellgallery.com/packages/MSOnline",
         "ReplacedBy": "Microsoft.Entra"
     },
@@ -31,7 +29,7 @@ function Get-Office365ModuleInfo {
         "Repo": "https://www.powershellgallery.com/packages/AIPService"
     },
     {
-        "Module": "Microsoft.Online.Sharepoint.PowerShell",
+        "Module": "Microsoft.Online.SharePoint.PowerShell",
         "Description": "SharePoint Online",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Online.SharePoint.PowerShell"
     },
@@ -47,86 +45,86 @@ function Get-Office365ModuleInfo {
     },
     {
         "Module": "PnP.PowerShell",
-        "Description": "PnP.PowerShell",
+        "Description": "Microsoft 365 Patterns and Practices (PnP)",
         "Repo": "https://www.powershellgallery.com/packages/PnP.PowerShell"
     },
     {
         "Module": "Microsoft.PowerApps.Administration.PowerShell",
-        "Description": "PowerApps-Admin-PowerShell",
+        "Description": "PowerApps and Flow Administration",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.PowerApps.Administration.PowerShell"
     },
     {
         "Module": "Microsoft.PowerApps.PowerShell",
-        "Description": "PowerApps-PowerShell",
+        "Description": "PowerApps and Flow",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell"
     },
     {
         "Module": "Microsoft.Graph.Intune",
-        "Description": "MSGraph-Intune",
+        "Description": "Microsoft Intune Graph API",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Intune"
     },
     {
         "Module": "Microsoft.Graph",
-        "Description": "Microsoft.Graph",
+        "Description": "Microsoft Graph PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph"
     },
     {
         "Module": "Microsoft.Graph.Beta",
-        "Description": "Microsoft.Graph.Beta",
+        "Description": "Microsoft Graph PowerShell Beta",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Beta"
     },
     {
         "Module": "Microsoft.Graph.Entra",
-        "Description": "Microsoft.Graph.Entra",
+        "Description": "Microsoft Graph Entra (deprecated)",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Entra",
         "ReplacedBy": "Microsoft.Entra"
     },
     {
         "Module": "Microsoft.Entra",
-        "Description": "Microsoft.Entra",
+        "Description": "Microsoft Entra PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Entra",
         "Replaces": "Microsoft.Graph.Entra"
     },
     {
         "Module": "Microsoft.Graph.Entra.Beta",
-        "Description": "Microsoft.Graph.Entra.Beta",
+        "Description": "Microsoft Graph Entra Beta (deprecated)",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Entra.Beta",
         "ReplacedBy": "Microsoft.Entra.Beta"
     },
     {
         "Module": "Microsoft.Entra.Beta",
-        "Description": "Microsoft.Entra.Beta",
+        "Description": "Microsoft Entra PowerShell Beta",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Entra.Beta",
         "Replaces": "Microsoft.Graph.Entra.Beta"
     },
     {
         "Module": "MicrosoftPlaces",
-        "Description": "MicrosoftPlaces",
+        "Description": "Microsoft Places",
         "Repo": "https://www.powershellgallery.com/packages/MicrosoftPlaces"
     },
     {
         "Module": "MicrosoftPowerBIMgmt",
-        "Description": "MicrosoftPowerBIMgmt",
+        "Description": "Microsoft Power BI",
         "Repo": "https://www.powershellgallery.com/packages/MicrosoftPowerBIMgmt"
     },
     {
         "Module": "Az",
-        "Description": "Az",
+        "Description": "Azure PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/Az"
     },
     {
         "Module": "Microsoft365DSC",
-        "Description": "Microsoft365DSC",
+        "Description": "Microsoft 365 Desired State Configuration",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft365DSC"
     },
     {
         "Module": "WhiteboardAdmin",
-        "Description": "WhiteboardAdmin",
+        "Description": "Microsoft Whiteboard Administration",
         "Repo": "https://www.powershellgallery.com/packages/WhiteboardAdmin"
     },
     {
         "Module": "MSIdentityTools",
-        "Description": "MSIdentityTools",
+        "Description": "Microsoft Identity Tools",
         "Repo": "https://www.powershellgallery.com/packages/MSIdentityTools"
     },
     {
@@ -136,7 +134,7 @@ function Get-Office365ModuleInfo {
     },
     {
         "Module": "ORCA",
-        "Description": "Office 365 Recommended Configuration Analyzer (ORCA)",
+        "Description": "Microsoft Defender for Office 365 Recommended Configuration Analyzer (ORCA)",
         "Repo": "https://www.powershellgallery.com/packages/ORCA"
     }
     ]' | ConvertFrom-Json

@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0'
+$local:ModuleVersion = '4.0.1'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
@@ -27,25 +27,40 @@ foreach ($local:Function in $local:PublicFunctions) {
 # ── Initialize module state ───────────────────────────────────────────────────
 Initialize-ServicesState
 
+# ── Console color struct ─────────────────────────────────────────────────────
+$local:PrivateData = $Host.PrivateData
+$script:myConsoleColors = [PSCustomObject]@{
+    Warning = If ($local:PrivateData -and $local:PrivateData.WarningForegroundColor -is [System.ConsoleColor]) {
+                  $local:PrivateData.WarningForegroundColor
+              } Else { [System.ConsoleColor]::Yellow }
+    Error   = If ($local:PrivateData -and $local:PrivateData.ErrorForegroundColor -is [System.ConsoleColor]) {
+                  $local:PrivateData.ErrorForegroundColor
+              } Else { [System.ConsoleColor]::Red }
+    OK      = [System.ConsoleColor]::Green
+    Muted   = [System.ConsoleColor]::White
+}
+
 # ── Detect PSResourceGet availability ────────────────────────────────────────
-Get-myPSResourceGetInstalled
+# NOTE: called after the AllInstalled pre-fetch so it re-uses the cached list
+#       instead of triggering a second filtered Get-Module -ListAvailable scan.
 
 # ── Banner ────────────────────────────────────────────────────────────────────
-$local:PSGetModule = Get-Module -Name Microsoft.PowerShell.PSResourceGet -ListAvailable -ErrorAction SilentlyContinue |
+$local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
+Get-myPSResourceGetInstalled -AllInstalled $local:AllInstalled
+$local:PSGetModule = $local:AllInstalled | Where-Object { $_.Name -eq 'Microsoft.PowerShell.PSResourceGet' } |
     Sort-Object -Property Version -Descending | Select-Object -First 1
 $local:PSGetVer = If ($local:PSGetModule) { $local:PSGetModule.Version } Else { 'N/A' }
 
-$local:PackageManagementModule = Get-Module -Name PackageManagement -ListAvailable -ErrorAction SilentlyContinue |
+$local:PackageManagementModule = $local:AllInstalled | Where-Object { $_.Name -eq 'PackageManagement' } |
     Sort-Object -Property Version -Descending | Select-Object -First 1
 $local:PMMVer = If ($local:PackageManagementModule) { $local:PackageManagementModule.Version } Else { 'N/A' }
 
-$local:IsAdmin = [System.Security.principal.windowsprincipal]::new(
-    [System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+$local:IsAdmin = Test-IsAdministrator
 
 Write-Host ('*' * 78)
 Write-Host ('Connect-Office365Services v{0}' -f $local:ModuleVersion)
-Write-Host ('Source: https://github.com/michelderooij/Connect-Office365Services')
-Write-Host ('Environment:{0}, Administrator:{1}, Scope:{2}' -f $script:myOffice365Services['AzureEnvironment'], $local:IsAdmin, $script:myOffice365Services['Scope'])
+Write-Host ('https://github.com/michelderooij/Connect-Office365Services')
+Write-Host ('Environment:{0}, Administrator:{1}, Scope:{2}' -f $script:myOffice365Services['AzureEnvironmentName'], $local:IsAdmin, $script:myOffice365Services['Scope'])
 Write-Host ('PS:{0}, PSResourceGet:{1}, PackageManagement:{2}' -f ($PSVersionTable).PSVersion, $local:PSGetVer, $local:PMMVer)
 Write-Host ('*' * 78)
 
@@ -53,12 +68,7 @@ Write-Host ('*' * 78)
 $local:Functions = Get-Office365ModuleInfo
 $local:Functions | ForEach-Object -Process {
     $local:Item = $_
-    # Use Get-Module directly (PSResourceInfo lacks RepositorySourceLocation)
-    $local:Module = Get-Module -Name ('{0}' -f $local:Item.Module) -ListAvailable -ErrorAction SilentlyContinue |
-        Sort-Object -Property Version -Descending
-    $local:Module = $local:Module |
-        Where-Object { $_.RepositorySourceLocation -and ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($local:Item.Repo)).Authority } |
-        Select-Object -First 1
+    $local:Module = Get-InstalledRepoModule -Name $local:Item.Module -Repo $local:Item.Repo -AllInstalled $local:AllInstalled
     If ($local:Module) {
         $local:Version = Get-ModuleVersionInfo -Module $local:Module
         Write-Host ('Found {0} (v{1})' -f $local:Item.Description, $local:Version)

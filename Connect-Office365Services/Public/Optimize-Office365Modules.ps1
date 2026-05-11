@@ -8,14 +8,15 @@ function Optimize-Office365Modules {
         $script:myOffice365Services['AllowPrerelease'] = $AllowPrerelease.IsPresent
     }
 
-    $local:IsAdmin= [System.Security.principal.windowsprincipal]::new([System.Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+    $local:IsAdmin= Test-IsAdministrator
     If( $local:IsAdmin) {
         If( (Get-Process -Name powershell, pwsh -ErrorAction SilentlyContinue | Measure-Object).Count -gt 1) {
             Write-Warning ('Running multiple PowerShell sessions, successful cleanup might be problematic.')
         }
+        $local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
         ForEach ( $local:Item in $local:Functions) {
 
-            $local:Module= Get-Module -Name ('{0}' -f $local:Item.Module) -ListAvailable | Sort-Object -Property Version -Descending
+            $local:Module= $local:AllInstalled | Where-Object { $_.Name -eq $local:Item.Module } | Sort-Object -Property Version -Descending
 
             If( $local:Module) {
                 Write-Host ('Checking {0} .. ' -f $local:Item.Description) -NoNewline

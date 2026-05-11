@@ -17,7 +17,7 @@ After importing the module, the following functions are available:
 * `Connect-Office365`               Connects to all configured services
 
 **Credentials & identity**
-* `Get-Office365Credentials`        Gets Microsoft 365 credentials
+* `Get-Office365Credential`         Gets Microsoft 365 credentials
 * `Get-OnPremisesCredentials`       Gets On-Premises credentials
 * `Get-Office365Tenant`             Gets Microsoft 365 tenant name
 * `Get-ExchangeOnPremisesFQDN`      Gets FQDN for Exchange On-Premises
@@ -55,6 +55,15 @@ Then import the module (or add this to your PowerShell profile):
 ```powershell
 Import-Module Connect-Office365Services
 ```
+
+## Breaking Changes Per v4.0
+
+Version 4.0 converted Connect-Office365Services from a standalone script into a proper PowerShell module. The following changes may require updating existing scripts or profiles that used the older `.ps1` file:
+* The script was previously downloaded and to be dot-sourced. A module is installed from PowerShell Gallery and imported.
+* Internal helper functions are now private, e.g. Get-myModule, Find-myModule a.o.
+* The module state variable is private to the module (myOffice365Services).
+* The `USGovernment` environment was renamed to `GCC`.
+* `Connect-ComplianceCenter` was removed in v3.45; use `Connect-IPPSSession` instead.
 
 ## Changelog
 

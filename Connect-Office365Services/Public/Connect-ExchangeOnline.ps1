@@ -48,22 +48,33 @@ function Connect-ExchangeOnline {
         Else {
             If ( $PSBoundParameters.ContainsKey('Credential')) {
                 Write-Host ('Connecting to Exchange Online using {0} ..' -f $PSBoundParameters['Credential'].UserName)
-                $script:myOffice365Services['Office365Credentials'] = $PSBoundParameters['Credential']
+                $script:myOffice365Services['Office365Credential'] = $PSBoundParameters['Credential']
             }
             Else {
-                If ( $script:myOffice365Services['Office365Credentials']) {
-                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $script:myOffice365Services['Office365Credentials'].UserName)
-                    $PSBoundParameters['Credential'] = $script:myOffice365Services['Office365Credentials']
+                # Ensure we have an account cached (MSAL) or credentials (legacy)
+                If ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
+                    Get-Office365Credential
+                }
+
+                # Modern auth: acquire EXO-scoped token and pass via -AccessToken + -UserPrincipalName
+                $local:exoToken = Get-Office365AccessToken -Scope 'https://outlook.office365.com/.default'
+                If ($local:exoToken) {
+                    $PSBoundParameters['AccessToken']       = ConvertTo-SecureString $local:exoToken -AsPlainText -Force
+                    $PSBoundParameters['UserPrincipalName'] = $script:myOffice365Services['Office365UPN']
+                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $script:myOffice365Services['Office365UPN'])
+                }
+                ElseIf ( $script:myOffice365Services['Office365UPN']) {
+                    # MSAL auth done but EXO scope unavailable — use UPN for WAM SSO
+                    $PSBoundParameters['UserPrincipalName'] = $script:myOffice365Services['Office365UPN']
+                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $script:myOffice365Services['Office365UPN'])
+                }
+                ElseIf ( $script:myOffice365Services['Office365Credential']) {
+                    # Legacy PSCredential path
+                    Write-Host ('Connecting to Exchange Online using {0} ..' -f $script:myOffice365Services['Office365Credential'].UserName)
+                    $PSBoundParameters['Credential'] = $script:myOffice365Services['Office365Credential']
                 }
                 Else {
-                    Get-Office365Credentials
-                    If ( $script:myOffice365Services['Office365Credentials']) {
-                        Write-Host ('Connecting to Exchange Online using {0} ..' -f $script:myOffice365Services['Office365Credentials'].UserName)
-                        $PSBoundParameters['Credential'] = $script:myOffice365Services['Office365Credentials']
-                    }
-                    Else {
-                        Write-Host ('Connecting to Exchange Online ..')
-                    }
+                    Write-Host ('Connecting to Exchange Online ..')
                 }
             }
         }

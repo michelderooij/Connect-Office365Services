@@ -1,12 +1,34 @@
 function Connect-IPPSSession {
-    If(!( Get-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue)) {
+    If (-not (Get-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue)) {
         Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue
     }
-    If( Get-Command -Name Connect-IPPSSession -ErrorAction SilentlyContinue) {
-        # Fixed: added null guard for credentials before accessing .UserName
-        If ( !($script:myOffice365Services['Office365Credentials'])) { Get-Office365Credentials }
-        Write-Host ('Connecting to Security & Compliance Center ..')
-        $script:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession -ConnectionUri $script:myOffice365Services['SCCConnectionEndpointUri'] -UserPrincipalName ($script:myOffice365Services['Office365Credentials']).UserName -PSSessionOption $script:myOffice365Services['SessionOptions']
+    If (Get-Command -Name Connect-IPPSSession -ErrorAction SilentlyContinue) {
+        # Ensure we have an account cached (MSAL) or credentials (legacy)
+        If ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
+            Get-Office365Credential
+        }
+
+        Write-Host 'Connecting to Security & Compliance Center ..'
+
+        $local:connectParams = @{
+            ConnectionUri   = $script:myOffice365Services['SCCConnectionEndpointUri']
+            PSSessionOption = $script:myOffice365Services['SessionOptions']
+        }
+
+        # Modern auth: try AccessToken first, fall back to UPN (WAM SSO), then legacy credential
+        $local:exoToken = Get-Office365AccessToken -Scope 'https://outlook.office365.com/.default'
+        If ($local:exoToken) {
+            $local:connectParams['AccessToken']       = ConvertTo-SecureString $local:exoToken -AsPlainText -Force
+            $local:connectParams['UserPrincipalName'] = $script:myOffice365Services['Office365UPN']
+        }
+        ElseIf ($script:myOffice365Services['Office365UPN']) {
+            $local:connectParams['UserPrincipalName'] = $script:myOffice365Services['Office365UPN']
+        }
+        ElseIf ($script:myOffice365Services['Office365Credential']) {
+            $local:connectParams['UserPrincipalName'] = $script:myOffice365Services['Office365Credential'].UserName
+        }
+
+        $script:myOffice365Services['SessionCC'] = ExchangeOnlineManagement\Connect-IPPSSession @local:connectParams
         If ( $script:myOffice365Services['SessionCC'] ) {
             Import-PSSession -Session $script:myOffice365Services['SessionCC'] -AllowClobber
         }

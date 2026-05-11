@@ -1,3 +1,4 @@
 # General
 *.bak
 *.DS_Store
+.vscode/mcp.json
