@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2015-2018 Michel de Rooij
+Copyright (c) 2015-2026 Michel de Rooij
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
