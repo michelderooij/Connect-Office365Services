@@ -57,11 +57,11 @@ jobs:
 
           foreach ($file in $filesToCopy) {
             if (Test-Path $file) {
-              Copy-Item -Path $file -Destination $stage\Connect-Office365Services -Force
+              Copy-Item -Path $file -Destination (Join-Path $stage 'Connect-Office365Services') -Force
             }
           }
-
-          "MODULE_STAGE=$stage\Connect-Office365Services" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $PSDDIR= Join-Path $stage 'Connect-Office365Services'
+          "MODULE_STAGE=$PSDDIR" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Module package prepared in $stage"
 
       - name: Set module version from tag
