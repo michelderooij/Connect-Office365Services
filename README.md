@@ -1,55 +1,80 @@
 # Connect-Office365Services
 
-PowerShell script defining functions to connect to Office 365 online services
-or Exchange On-Premises.
+PowerShell module providing functions to connect to Microsoft 365 online services and Exchange On-Premises, as well as perform module management.
 
 ## Getting Started
 
-After execution, the following helper functions will be available:
+After importing the module, the following functions are available:
 
-* Select-Office365Modules          (Un)install Office 365 powershell modules
-* Connect-AzureActiveDirectory	    Connects to Azure Active Directory
-* Connect-AzureRMS           	    Connects to Azure Rights Management
-* Connect-ExchangeOnline     	    Connects to Exchange Online
-* Connect-EOP                	    Connects to Exchange Online Protection
-* Connect-ComplianceCenter   	    Connects to Compliance Center
-* Connect-SharePointOnline   	    Connects to SharePoint Online
-* Connect-MSTeams                   Connects to Microsoft Teams
-* Get-Office365Credentials    	    Gets Office 365 credentials
-* Connect-ExchangeOnPremises 	    Connects to Exchange On-Premises
-* Get-OnPremisesCredentials    	    Gets On-Premises credentials
-* Get-ExchangeOnPremisesFQDNGets    FQDN for Exchange On-Premises
-* Get-Office365Tenant		    Gets Office 365 tenant name
-* Set-Office365Environment          Configures Uri's and region to use
+**Connect**
+* `Connect-ExchangeOnline`          Connects to Exchange Online
+* `Connect-ExchangeOnPremises`      Connects to Exchange On-Premises
+* `Connect-IPPSSession`             Connects to Security & Compliance (IPPS)
+* `Connect-MSTeams`                 Connects to Microsoft Teams
+* `Connect-AIP`                     Connects to Azure Information Protection
+* `Connect-SharePointOnline`        Connects to SharePoint Online
+* `Connect-PowerApps`               Connects to Power Apps
+* `Connect-Office365`               Connects to all configured services
+
+**Credentials & identity**
+* `Get-Office365Credentials`        Gets Microsoft 365 credentials
+* `Get-OnPremisesCredentials`       Gets On-Premises credentials
+* `Get-Office365Tenant`             Gets Microsoft 365 tenant name
+* `Get-ExchangeOnPremisesFQDN`      Gets FQDN for Exchange On-Premises
+* `Get-TenantID`                    Resolves tenant ID from a domain or UPN
+
+**Environment & preferences**
+* `Set-Office365Environment`        Configures endpoints and region (Default, GCC, GCCHigh, DoD, China, Germany, AzurePPE)
+* `Get-Office365Services`           Returns current module state
+* `Set-Office365ServicesPreferences` Views or sets user preferences
+
+**Module management**
+* `Select-Office365Modules`         Interactively install/uninstall Office 365 PowerShell modules
+* `Update-Office365Modules`         Updates installed Office 365 modules
+* `Optimize-Office365Modules`       Removes old module versions
+* `Show-Office365Modules`           Lists available and installed modules
 
 ### Prerequisites
 
-Script requires PowerShell 5.0 and higher and any modules installed you would like to use for connecting to Office 365 workloads.
+PowerShell 5.1 or higher. Modules for the services you want to connect to must be installed — use `Select-Office365Modules` to manage them.
 
 ### Installing
 
-Call the script ad-hoc, or load from PowerShell profile, e.g.
+#### From the PowerShell Gallery (recommended)
 
-Store the script in the same location as your profile; default location is
-$ENV:UserProfile\\Documents\\WindowsPowerShell\\Microsoft.PowerShell\_profile.ps1)
+```powershell
+Install-Module -Name Connect-Office365Services
+```
 
-Then, create a PowerShell profile when you have not done so yet:
+Or with [PSResourceGet](https://learn.microsoft.com/powershell/module/microsoft.powershell.psresourceget/):
 
-notepad $Profile
+```powershell
+Install-PSResource -Name Connect-Office365Services
+```
 
-and insert a line to load the script (making helper functions available):
+Then import the module (or add this to your PowerShell profile):
 
-\& (Join-Path $PSScriptRoot "Connect-Office365Services.ps1")
+```powershell
+Import-Module Connect-Office365Services
+```
 
-Next time you open PowerShell, the script should load.
+#### From source
 
-## Contributing
+Clone or download the repository, then import directly:
 
-N/A
+```powershell
+Import-Module .\Connect-Office365Services\Connect-Office365Services.psd1
+```
+
+Or dot-source the legacy script if upgrading from a pre-v4 installation:
+
+```powershell
+. .\Connect-Office365Services.ps1
+```
 
 ## Versioning
 
-Initial version published on GitHub is 1.84. Changelog is contained in the script.
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
 ## Authors
 
@@ -57,9 +82,4 @@ Initial version published on GitHub is 1.84. Changelog is contained in the scrip
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE.md for details.
-
-## Acknowledgments
-
-N/A
-
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) for details.
