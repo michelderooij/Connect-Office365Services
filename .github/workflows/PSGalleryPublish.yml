@@ -40,17 +40,6 @@ jobs:
 
           New-Item -ItemType Directory -Path $stage | Out-Null
 
-          $filesToCopy = @(
-            'CHANGELOG.md',
-            'LICENSE'
-          )
-
-          foreach ($file in $filesToCopy) {
-            if (Test-Path $file) {
-              Copy-Item -Path $file -Destination $stage -Force
-            }
-          }
-
           $dirsToCopy = @(
             'Connect-Office365Services'
           )
@@ -61,7 +50,18 @@ jobs:
             }
           }
 
-          "MODULE_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $filesToCopy = @(
+            'CHANGELOG.md',
+            'LICENSE'
+          )
+
+          foreach ($file in $filesToCopy) {
+            if (Test-Path $file) {
+              Copy-Item -Path $file -Destination $stage\Connect-Office365Services -Force
+            }
+          }
+
+          "MODULE_STAGE=$stage\Connect-Office365Services" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Module package prepared in $stage"
 
       - name: Set module version from tag
