@@ -52,7 +52,7 @@ jobs:
           }
 
           $dirsToCopy = @(
-            'Connect-Office365Services',
+            'Connect-Office365Services'
           )
 
           foreach ($dir in $dirsToCopy) {
