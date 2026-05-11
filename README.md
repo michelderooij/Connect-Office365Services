@@ -40,8 +40,6 @@ PowerShell 5.1 or higher. Modules for the services you want to connect to must b
 
 ### Installing
 
-#### From the PowerShell Gallery (recommended)
-
 ```powershell
 Install-Module -Name Connect-Office365Services
 ```
@@ -56,20 +54,6 @@ Then import the module (or add this to your PowerShell profile):
 
 ```powershell
 Import-Module Connect-Office365Services
-```
-
-#### From source
-
-Clone or download the repository, then import directly:
-
-```powershell
-Import-Module .\Connect-Office365Services\Connect-Office365Services.psd1
-```
-
-Or dot-source the legacy script if upgrading from a pre-v4 installation:
-
-```powershell
-. .\Connect-Office365Services.ps1
 ```
 
 ## Changelog
