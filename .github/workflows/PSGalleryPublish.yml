@@ -40,19 +40,8 @@ jobs:
 
           New-Item -ItemType Directory -Path $stage | Out-Null
 
-          $filesToCopy = @(
-            'CHANGELOG.md',
-            'LICENSE'
-          )
-
-          foreach ($file in $filesToCopy) {
-            if (Test-Path $file) {
-              Copy-Item -Path $file -Destination $stage -Force
-            }
-          }
-
           $dirsToCopy = @(
-            'Connect-Office365Services',
+            'Connect-Office365Services'
           )
 
           foreach ($dir in $dirsToCopy) {
@@ -61,7 +50,18 @@ jobs:
             }
           }
 
-          "MODULE_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $filesToCopy = @(
+            'CHANGELOG.md',
+            'LICENSE'
+          )
+
+          foreach ($file in $filesToCopy) {
+            if (Test-Path $file) {
+              Copy-Item -Path $file -Destination (Join-Path $stage 'Connect-Office365Services') -Force
+            }
+          }
+          $PSDDIR= Join-Path $stage 'Connect-Office365Services'
+          "MODULE_STAGE=$PSDDIR" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Module package prepared in $stage"
 
       - name: Set module version from tag
@@ -105,7 +105,7 @@ jobs:
           }
 
           $version = $Matches.version
-          $manifest = Join-Path $env:MODULE_STAGE 'EDCA.psd1'
+          $manifest = Join-Path $env:MODULE_STAGE 'Connect-Office365Services.psd1'
 
           if (-not (Test-Path $manifest)) {
             throw "Module manifest not found: $manifest"
