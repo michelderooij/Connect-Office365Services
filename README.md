@@ -72,13 +72,10 @@ Or dot-source the legacy script if upgrading from a pre-v4 installation:
 . .\Connect-Office365Services.ps1
 ```
 
-## Versioning
+## Changelog
 
 See [CHANGELOG.md](CHANGELOG.md) for the full version history.
 
-## Authors
-
-* Michel de Rooij \[initial work] https://github.com/michelderooij
 
 ## License
 
