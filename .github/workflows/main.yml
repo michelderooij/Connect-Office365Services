@@ -1,0 +1,139 @@
+name: Publish PowerShell Module
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional version tag to publish; if omitted, latest v* tag is used'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: psgallery-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: psgallery
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare module package
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'Office365Services'
+
+          if (Test-Path $stage) {
+            Remove-Item $stage -Recurse -Force
+          }
+
+          New-Item -ItemType Directory -Path $stage | Out-Null
+
+          $filesToCopy = @(
+            'CHANGELOG.md',
+            'LICENSE'
+          )
+
+          foreach ($file in $filesToCopy) {
+            if (Test-Path $file) {
+              Copy-Item -Path $file -Destination $stage -Force
+            }
+          }
+
+          $dirsToCopy = @(
+            'Connect-Office365Services',
+          )
+
+          foreach ($dir in $dirsToCopy) {
+            if (Test-Path $dir) {
+              Copy-Item -Path $dir -Destination $stage -Recurse -Force
+            }
+          }
+
+          "MODULE_STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Module package prepared in $stage"
+
+      - name: Set module version from tag
+        shell: pwsh
+        run: |
+          $tag = "${{ inputs.version }}"
+
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $refType = "${{ github.ref_type }}"
+            $refName = "${{ github.ref_name }}"
+
+            if ($refType -eq 'tag' -and $refName -match '^v') {
+              $tag = $refName
+            }
+            else {
+              git fetch --tags --force | Out-Null
+              $tag = git tag --list 'v*' |
+                Where-Object { $_ -match '^v' } |
+                ForEach-Object {
+                  $originalTag = $_
+                  $version = $_ -replace '^v', ''
+
+                  if ($version -match '^\d+\.\d+\.\d+(\.\d+)?(-[0-9A-Za-z\.-]+)?$') {
+                    [PSCustomObject]@{
+                      Tag = $originalTag
+                      Version = $version
+                    }
+                  }
+                } |
+                Sort-Object Version -Descending |
+                Select-Object -First 1 -ExpandProperty Tag
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            throw "No version tag was provided and no matching repository tag was found."
+          }
+
+          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+(\.\d+)?(-[0-9A-Za-z\.-]+)?)$') {
+            throw "Tag '$tag' is not a valid supported version tag."
+          }
+
+          $version = $Matches.version
+          $manifest = Join-Path $env:MODULE_STAGE 'EDCA.psd1'
+
+          if (-not (Test-Path $manifest)) {
+            throw "Module manifest not found: $manifest"
+          }
+
+          Update-ModuleManifest -Path $manifest -ModuleVersion $version
+          Write-Host "ModuleVersion set to $version in $manifest"
+
+      - name: Install PSResourceGet
+        shell: pwsh
+        run: |
+          Install-Module Microsoft.PowerShell.PSResourceGet -Scope CurrentUser -Force
+          Import-Module Microsoft.PowerShell.PSResourceGet -Force
+
+          if (-not (Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+            Register-PSResourceRepository -PSGallery
+          }
+
+          Set-PSResourceRepository -Name PSGallery -Trusted
+
+      - name: Publish to PowerShell Gallery
+        shell: pwsh
+        env:
+          PSGALLERY_API_KEY: ${{ secrets.GALLERY_API_KEY }}
+        run: |
+          Import-Module Microsoft.PowerShell.PSResourceGet -Force
+
+          Publish-PSResource `
+            -Path $env:MODULE_STAGE `
+            -Repository PSGallery `
+            -ApiKey $env:PSGALLERY_API_KEY
