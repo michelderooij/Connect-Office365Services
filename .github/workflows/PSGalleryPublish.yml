@@ -105,7 +105,7 @@ jobs:
           }
 
           $version = $Matches.version
-          $manifest = Join-Path $env:MODULE_STAGE 'EDCA.psd1'
+          $manifest = Join-Path $env:MODULE_STAGE 'Connect-Office365Services.psd1'
 
           if (-not (Test-Path $manifest)) {
             throw "Module manifest not found: $manifest"
