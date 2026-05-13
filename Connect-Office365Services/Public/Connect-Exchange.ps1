@@ -1,4 +1,4 @@
-function Connect-ExchangeOnPremises {
+function Connect-Exchange {
     If ( !($script:myOffice365Services['OnPremisesCredentials'])) { Get-OnPremisesCredentials }
     If ( !($script:myOffice365Services['ExchangeOnPremisesFQDN'])) { Get-ExchangeOnPremisesFQDN }
     # Fixed: removed erroneous '!' — only connect when credentials ARE present

@@ -1,5 +1,19 @@
 # Changelog
 
+## v4.0.2
+- Changed: `Connect-ExchangeOnline` renamed to `Connect-EXO` to avoid conflict with ExchangeOnlineManagement.
+- Changed: `Connect-IPPSSession` renamed to `Connect-SCC` to avoid conflict with ExchangeOnlineManagement.
+- Changed: `Connect-SharePointOnline` renamed to `Connect-SPO` for consistency.
+- Changed: `Connect-ExchangeOnPremises` renamed to `Connect-Exchange` for consistency.
+- Added: `NoBanner` preference to suppress the ASCII art banner on module import.
+- Added: `NoQuote` preference to suppress the random quote on module import.
+- Added: `Save-Office365ModuleState` to snapshot installed module versions into the preferences file.
+- Added: `Restore-Office365ModuleState` to reinstall modules from the saved snapshot; use `-Recent` to install the latest version instead of the pinned version.
+- Added: `Export-Office365ModuleConfig` to export the preferences file as JSON using the `-File` parameter.
+- Added: `Import-Office365ModuleConfig` to import a previously exported preferences file using the `-File` parameter; updates live session state immediately.
+- Fixed: banner module list output producing `InvalidOperation` errors.
+- Fixed: `Save-Office365ServicesPreferences` issue when updating preferences.
+
 ## v4.0.1
 - Fixed: module install path resolved incorrectly on systems with a non-default home drive.
 - Fixed: invalid Exchange On-Premises hostnames are now rejected; prompt repeats until valid.
@@ -38,7 +52,7 @@
 - added DoD environment (Department of Defense)
 - Updated Germany environment
 
-## v3.46 
+## v3.46
 - Changed module check before import to catch issues
 - Small cleanup Connect-SPO
 - Small textual corrections in synopsis

@@ -32,6 +32,14 @@ function Set-Office365ServicesPreferences {
     Valid values: None, WinHttpConfig, AutoDetect, IEConfig, NoProxyServer.
     Defaults to 'None'.
 
+    .PARAMETER NoBanner
+    When set to $true, suppresses the ASCII art banner shown during module import.
+    Defaults to $false.
+
+    .PARAMETER NoQuote
+    When set to $true, suppresses the random quote shown during module import.
+    Defaults to $false.
+
     .EXAMPLE
     Set-Office365ServicesPreferences
     Displays the current preference values.
@@ -55,7 +63,11 @@ function Set-Office365ServicesPreferences {
         [string]$Scope,
 
         [ValidateSet('None', 'WinHttpConfig', 'AutoDetect', 'IEConfig', 'NoProxyServer')]
-        [string]$ProxyAccessType
+        [string]$ProxyAccessType,
+
+        [System.Nullable[bool]]$NoBanner,
+
+        [System.Nullable[bool]]$NoQuote
     )
 
     # ── No parameters: display current preferences ────────────────────────────
@@ -65,6 +77,8 @@ function Set-Office365ServicesPreferences {
             AzureEnvironment = [string]$script:myOffice365Services['AzureEnvironmentName']
             Scope            = [string]$script:myOffice365Services['Scope']
             ProxyAccessType  = [string]$script:myOffice365Services['ProxyAccessType']
+            NoBanner         = [bool]$script:myOffice365Services['NoBanner']
+            NoQuote          = [bool]$script:myOffice365Services['NoQuote']
         }
         return
     }
@@ -90,6 +104,16 @@ function Set-Office365ServicesPreferences {
     if ($PSBoundParameters.ContainsKey('ProxyAccessType')) {
         $script:myOffice365Services['ProxyAccessType'] = $ProxyAccessType
         $script:myOffice365Services['SessionOptions']  = New-PSSessionOption -ProxyAccessType $ProxyAccessType
+        $local:changed = $true
+    }
+
+    if ($PSBoundParameters.ContainsKey('NoBanner')) {
+        $script:myOffice365Services['NoBanner'] = [bool]$NoBanner
+        $local:changed = $true
+    }
+
+    if ($PSBoundParameters.ContainsKey('NoQuote')) {
+        $script:myOffice365Services['NoQuote'] = [bool]$NoQuote
         $local:changed = $true
     }
 

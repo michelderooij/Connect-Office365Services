@@ -136,6 +136,17 @@ function Get-Office365ModuleInfo {
         "Module": "ORCA",
         "Description": "Microsoft Defender for Office 365 Recommended Configuration Analyzer (ORCA)",
         "Repo": "https://www.powershellgallery.com/packages/ORCA"
-    }
+    },
+    {
+        "Module": "Connect-Office365Services",
+        "Description": "Helper functions to connect to Microsoft 365 / Office 365 services and manage their PowerShell modules.",
+        "Repo": "https://www.powershellgallery.com/packages/Connect-Office365Services"
+    },
+    {
+        "Module": "MSAL.PS",
+        "Description": "Microsoft Authentication Library (MSAL) for PowerShell",
+        "Repo": "https://www.powershellgallery.com/packages/MSAL.PS"
+    },
+
     ]' | ConvertFrom-Json
 }

@@ -1,4 +1,4 @@
-function Connect-SharePointOnline {
+function Connect-SPO {
     If (-not (Get-Module -Name Microsoft.Online.SharePoint.PowerShell -ListAvailable)) {
         Import-Module -Name Microsoft.Online.SharePoint.PowerShell -ErrorAction SilentlyContinue
     }

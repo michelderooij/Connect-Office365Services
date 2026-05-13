@@ -10,6 +10,8 @@ function Read-Office365ServicesPreferences {
         AzureEnvironment = 'Default'
         Scope            = 'AllUsers'
         ProxyAccessType  = 'None'
+        NoBanner         = $false
+        NoQuote          = $false
     }
 
     $local:configPath = Join-Path -Path ([System.Environment]::GetFolderPath(

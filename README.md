@@ -7,12 +7,12 @@ PowerShell module providing functions to connect to Microsoft 365 online service
 After importing the module, the following functions are available:
 
 **Connect**
-* `Connect-ExchangeOnline`          Connects to Exchange Online
-* `Connect-ExchangeOnPremises`      Connects to Exchange On-Premises
-* `Connect-IPPSSession`             Connects to Security & Compliance (IPPS)
+* `Connect-EXO`                     Connects to Exchange Online (was `Connect-ExchangeOnline`)
+* `Connect-Exchange`                Connects to Exchange On-Premises (was `Connect-ExchangeOnPremises`)
+* `Connect-SCC`                     Connects to Security & Compliance (was `Connect-IPPSSession`)
 * `Connect-MSTeams`                 Connects to Microsoft Teams
 * `Connect-AIP`                     Connects to Azure Information Protection
-* `Connect-SharePointOnline`        Connects to SharePoint Online
+* `Connect-SPO`                     Connects to SharePoint Online (was `Connect-SharePointOnline`)
 * `Connect-PowerApps`               Connects to Power Apps
 * `Connect-Office365`               Connects to all configured services
 
@@ -33,6 +33,10 @@ After importing the module, the following functions are available:
 * `Update-Office365Modules`         Updates installed Office 365 modules
 * `Optimize-Office365Modules`       Removes old module versions
 * `Show-Office365Modules`           Lists available and installed modules
+* `Save-Office365ModuleState`       Saves installed module versions to the preferences file
+* `Restore-Office365ModuleState`    Reinstalls modules from the saved state; use `-Recent` for latest versions
+* `Export-Office365ModuleConfig`    Exports the preferences file as JSON (`-File`)
+* `Import-Office365ModuleConfig`    Imports a previously exported preferences file (`-File`)
 
 ### Prerequisites
 
@@ -55,6 +59,53 @@ Then import the module (or add this to your PowerShell profile):
 ```powershell
 Import-Module Connect-Office365Services
 ```
+
+## Exporting and Importing Preferences
+
+You can back up your preferences and installed module versions to a JSON file, and restore them on another machine or after a clean OS installation.
+
+### Export
+
+`Export-Office365ModuleConfig` first snapshots the currently installed module versions (`Save-Office365ModuleState`) and then writes the full config — preferences and module state — to the specified file:
+
+```powershell
+Export-Office365ModuleConfig -File C:\Backup\O365Config.json
+```
+
+### Import
+
+Copy the exported file to the new machine (with this module already installed), then import it:
+
+```powershell
+Import-Office365ModuleConfig -File C:\Backup\O365Config.json
+```
+
+This imports the saved preferences and module configuration from the file.
+
+### Restore modules
+
+After importing the config, reinstall the saved modules at their exact recorded versions:
+
+```powershell
+Restore-Office365ModuleState
+```
+
+Or install the latest available version of each saved module instead:
+
+```powershell
+Restore-Office365ModuleState -Recent
+```
+
+## Renamed Cmdlets
+
+The following connect functions were renamed to avoid collisions with identically-named cmdlets from first party modules:
+
+| New cmdlet | Replaces | Connects to |
+|---|---|---|
+| `Connect-EXO` |  | Exchange Online |
+| `Connect-Exchange` | `Connect-ExchangeOnPremises` | Exchange On-Premises |
+| `Connect-SCC` | `Connect-IPPSSession` | Security & Compliance (IPPS) |
+| `Connect-SPO` | `Connect-SharePointOnline` | SharePoint Online |
 
 ## Breaking Changes Per v4.0
 

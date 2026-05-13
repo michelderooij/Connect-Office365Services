@@ -1,7 +1,7 @@
 @{
     # Module identity
     RootModule        = 'Connect-Office365Services.psm1'
-    ModuleVersion     = '4.0.1'
+    ModuleVersion     = '4.0.2'
     GUID              = '6b44e9b9-f24f-4b27-bce0-bfef01a75d31'
     Author            = 'Michel de Rooij'
     CompanyName       = 'EighTwOne'
@@ -14,12 +14,12 @@
     # Functions exported from this module
     FunctionsToExport = @(
         # Connect functions
-        'Connect-ExchangeOnline',
-        'Connect-ExchangeOnPremises',
-        'Connect-IPPSSession',
+        'Connect-EXO',
+        'Connect-Exchange',
+        'Connect-SCC',
         'Connect-MSTeams',
         'Connect-AIP',
-        'Connect-SharePointOnline',
+        'Connect-SPO',
         'Connect-PowerApps',
         'Connect-Office365',
 
@@ -39,7 +39,11 @@
         'Select-Office365Modules',
         'Update-Office365Modules',
         'Optimize-Office365Modules',
-        'Show-Office365Modules'
+        'Show-Office365Modules',
+        'Save-Office365ModuleState',
+        'Restore-Office365ModuleState',
+        'Export-Office365ModuleConfig',
+        'Import-Office365ModuleConfig'
     )
 
     CmdletsToExport   = @()
@@ -47,7 +51,7 @@
     AliasesToExport   = @()
 
     # Module metadata for PSGallery
-    PrivateData = @{
+    PrivateData       = @{
         PSData = @{
             Tags         = @('Office365', 'Microsoft365', 'ExchangeOnline', 'AzureAD', 'SharePoint', 'Teams', 'MicrosoftTeams', 'PowerApps', 'Connect', 'M365')
             LicenseUri   = 'https://github.com/michelderooij/Connect-Office365Services/blob/main/LICENSE.md'

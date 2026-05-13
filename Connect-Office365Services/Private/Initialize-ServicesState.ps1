@@ -24,6 +24,10 @@ function Initialize-ServicesState {
     $script:myOffice365Services['ProxyAccessType'] = [string]$local:prefs['ProxyAccessType']
     $script:myOffice365Services['SessionOptions']  = New-PSSessionOption -ProxyAccessType $local:prefs['ProxyAccessType']
 
+    # Banner / quote suppression
+    $script:myOffice365Services['NoBanner'] = [bool]$local:prefs['NoBanner']
+    $script:myOffice365Services['NoQuote']  = [bool]$local:prefs['NoQuote']
+
     # Modern auth state (populated by Get-Office365Credential / Get-Office365AccessToken)
     $script:myOffice365Services['Office365UPN']   = ''
     $script:myOffice365Services['MsalAccount']    = $null
