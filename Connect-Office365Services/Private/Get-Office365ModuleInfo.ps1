@@ -139,7 +139,7 @@ function Get-Office365ModuleInfo {
     },
     {
         "Module": "Connect-Office365Services",
-        "Description": "Helper functions to connect to Microsoft 365 / Office 365 services and manage their PowerShell modules.",
+        "Description": "Connect-Office365Services for Office 365 Connectivity & Module Management.",
         "Repo": "https://www.powershellgallery.com/packages/Connect-Office365Services"
     },
     {

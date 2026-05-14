@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.0.3
+- Added: `Get-Office365Credential` now acquires a Graph token via MSAL.NET to seed the authentication session; `Connect-EXO`, `Connect-SCC`, `Connect-MSTeams`, `Connect-SPO`, `Connect-PowerApps`, and `Connect-AIP` reuse the cached identity so the user is not prompted again in the same session.
+- Changed: `Get-OnPremisesCredentials` renamed to `Get-OnPremisesCredential` (singular) for consistency.
+- Added: `Set-Office365Environment` now sets the `EOMEnvironmentName` for all environments so `Connect-EXO` and `Connect-SCC` route sovereign-cloud connections correctly.
+
 ## v4.0.2
 - Changed: `Connect-ExchangeOnline` renamed to `Connect-EXO` to avoid conflict with ExchangeOnlineManagement.
 - Changed: `Connect-IPPSSession` renamed to `Connect-SCC` to avoid conflict with ExchangeOnlineManagement.

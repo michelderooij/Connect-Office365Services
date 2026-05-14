@@ -96,17 +96,6 @@ Or install the latest available version of each saved module instead:
 Restore-Office365ModuleState -Recent
 ```
 
-## Renamed Cmdlets
-
-The following connect functions were renamed to avoid collisions with identically-named cmdlets from first party modules:
-
-| New cmdlet | Replaces | Connects to |
-|---|---|---|
-| `Connect-EXO` |  | Exchange Online |
-| `Connect-Exchange` | `Connect-ExchangeOnPremises` | Exchange On-Premises |
-| `Connect-SCC` | `Connect-IPPSSession` | Security & Compliance (IPPS) |
-| `Connect-SPO` | `Connect-SharePointOnline` | SharePoint Online |
-
 ## Breaking Changes Per v4.0
 
 Version 4.0 converted Connect-Office365Services from a standalone script into a proper PowerShell module. The following changes may require updating existing scripts or profiles that used the older `.ps1` file:
@@ -115,6 +104,17 @@ Version 4.0 converted Connect-Office365Services from a standalone script into a 
 * The module state variable is private to the module (myOffice365Services).
 * The `USGovernment` environment was renamed to `GCC`.
 * `Connect-ComplianceCenter` was removed in v3.45; use `Connect-IPPSSession` instead.
+
+The following connect functions had to be renamed to avoid collisions with cmdlets of the same name from first party modules, due to how
+modules handle conflicts compared to dot-sourcing scripts:
+
+| New cmdlet | Replaces | Connects to |
+|---|---|---|
+| `Connect-EXO` |  | Exchange Online |
+| `Connect-Exchange` | `Connect-ExchangeOnPremises` | Exchange On-Premises |
+| `Connect-SCC` | `Connect-IPPSSession` | Security & Compliance (IPPS) |
+| `Connect-SPO` | `Connect-SharePointOnline` | SharePoint Online |
+
 
 ## Changelog
 

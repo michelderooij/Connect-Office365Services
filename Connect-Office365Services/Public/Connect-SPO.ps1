@@ -1,21 +1,22 @@
 function Connect-SPO {
-    If (-not (Get-Module -Name Microsoft.Online.SharePoint.PowerShell -ListAvailable)) {
+    if (-not (Get-Module -Name Microsoft.Online.SharePoint.PowerShell -ListAvailable)) {
         Import-Module -Name Microsoft.Online.SharePoint.PowerShell -ErrorAction SilentlyContinue
     }
-    If (Get-Command -Name Connect-SPOService -ErrorAction SilentlyContinue) {
-        If ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credentials']) {
-            Get-Office365Credentials
+    if (Get-Command -Name Connect-SPOService -ErrorAction SilentlyContinue) {
+        if ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
+            Get-Office365Credential
         }
         $local:upn = if ($script:myOffice365Services['Office365UPN']) {
             $script:myOffice365Services['Office365UPN']
-        } else {
-            $script:myOffice365Services['Office365Credentials'].UserName
+        }
+        else {
+            $script:myOffice365Services['Office365Credential'].UserName
         }
         # Derive the tenant name from the UPN when not already known
-        If ($local:upn -like '*.onmicrosoft.com') {
+        if ($local:upn -like '*.onmicrosoft.com') {
             $script:myOffice365Services['Office365Tenant'] = $local:upn.Substring($local:upn.IndexOf('@') + 1).Replace('.onmicrosoft.com', '')
         }
-        ElseIf (-not $script:myOffice365Services['Office365Tenant']) {
+        elseif (-not $script:myOffice365Services['Office365Tenant']) {
             Get-Office365Tenant
         }
         Write-Host 'Connecting to SharePoint Online ..'
@@ -25,7 +26,7 @@ function Connect-SPO {
         }
         Connect-SPOService @Parms
     }
-    Else {
+    else {
         Write-Error -Message 'Cannot connect to SharePoint Online - module not installed or not loading.'
     }
 }

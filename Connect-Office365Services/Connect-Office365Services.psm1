@@ -60,17 +60,16 @@ $local:PMMVer = if ($local:PackageManagementModule) { $local:PackageManagementMo
 $local:IsAdmin = Test-IsAdministrator
 
 if (-not $script:myOffice365Services['NoBanner']) {
-    Write-Host ('*' * 70)
+    Write-Host ('***********************************************************************')
     Write-Host (' _____                     _       _____ ___ ___ _         ___ ___ ___')
     Write-Host ('|     |___ ___ ___ ___ ___| |_ ___|     |  _|  _|_|___ ___|_  |  _|  _|')
     Write-Host ('|   --| . |   |   | -_|  _|  _|___|  |  |  _|  _| |  _| -_|_  | . |_  |')
     Write-Host ('|_____|___|_|_|_|_|___|___|_|     |_____|_| |_| |_|___|___|___|___|___|')
-    Write-Host ('')
+    Write-Host ('***********************************************************************')
     Write-Host ('Connect-Office365Services v{0}' -f $local:ModuleVersion)
     Write-Host ('https://github.com/michelderooij/Connect-Office365Services')
     Write-Host ('Environment:{0}, Administrator: {1}, Scope: {2}' -f $script:myOffice365Services['AzureEnvironmentName'], $local:IsAdmin, $script:myOffice365Services['Scope'])
     Write-Host ('PS:{0}, PSResourceGet: {1}, PackageManagement: {2}' -f ($PSVersionTable).PSVersion, $local:PSGetVer, $local:PMMVer)
-    Write-Host ('*' * 70)
 }
 
 # ── List installed modules ────────────────────────────────────────────────────

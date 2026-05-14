@@ -31,8 +31,9 @@ function Initialize-ServicesState {
     # Modern auth state (populated by Get-Office365Credential / Get-Office365AccessToken)
     $script:myOffice365Services['Office365UPN']   = ''
     $script:myOffice365Services['MsalAccount']    = $null
-    $script:myOffice365Services['MsalApp']        = $null   # PublicClientApplication instance (MSAL.NET)
-    $script:myOffice365Services['MsalNetWarned']  = $false  # suppress repeated "MSAL.NET not found" warnings
+    $script:myOffice365Services['MsalApp']             = $null   # PublicClientApplication instance — Graph Command Line Tools (MSAL.NET)
+    $script:myOffice365Services['MsalTokenCacheBytes'] = $null   # serialized MSAL token cache — persists Graph tokens across PCA rebuilds
+    $script:myOffice365Services['MsalNetWarned']       = $false  # suppress repeated "MSAL.NET not found" warnings
     # Well-known Microsoft Graph Command Line Tools public client — override via Set-Office365ServicesPreferences if needed
     $script:myOffice365Services['MsalClientId']   = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
 
