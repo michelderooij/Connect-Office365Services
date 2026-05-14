@@ -8,8 +8,12 @@ function Uninstall-myModule {
         [switch]$IsPrerelease
     )
     Process {
-        # Unload module from current session before attempting uninstall
-        Remove-Module -Name $Name -Force -ErrorAction SilentlyContinue
+        # Unload module from current session before attempting uninstall.
+        # Skip this for the currently executing module — removing ourselves would wipe all
+        # private functions from scope and break the rest of the running call stack.
+        if ($Name -ne $MyInvocation.MyCommand.Module.Name) {
+            Remove-Module -Name $Name -Force -ErrorAction SilentlyContinue
+        }
 
         $local:MaxRetries   = 10
         $local:Attempt      = 0

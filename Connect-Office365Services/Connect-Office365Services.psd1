@@ -1,7 +1,7 @@
 @{
     # Module identity
     RootModule        = 'Connect-Office365Services.psm1'
-    ModuleVersion     = '4.0.3'
+    ModuleVersion     = '4.0.4'
     GUID              = '6b44e9b9-f24f-4b27-bce0-bfef01a75d31'
     Author            = 'Michel de Rooij'
     CompanyName       = 'EighTwOne'

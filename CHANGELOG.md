@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.0.4
+- Fixed: `Update-Office365Modules` and `Optimize-Office365Modules` crashed with "not recognized" errors for all private functions after updating `Connect-Office365Services` itself. Root cause: the uninstall helper called `Remove-Module` on the currently running module, wiping all private functions from the session mid-execution. The self-removal is now skipped; the module files are still replaced on disk by the package manager.
+
 ## v4.0.3
 - Added: `Get-Office365Credential` now acquires a Graph token via MSAL.NET to seed the authentication session; `Connect-EXO`, `Connect-SCC`, `Connect-MSTeams`, `Connect-SPO`, `Connect-PowerApps`, and `Connect-AIP` reuse the cached identity so the user is not prompted again in the same session.
 - Changed: `Get-OnPremisesCredentials` renamed to `Get-OnPremisesCredential` (singular) for consistency.

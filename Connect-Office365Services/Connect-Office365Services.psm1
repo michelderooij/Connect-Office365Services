@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0.2'
+$local:ModuleVersion = '4.0.4'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
