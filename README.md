@@ -2,7 +2,7 @@
 
 ![PowerShell Gallery Downloads](https://img.shields.io/powershellgallery/dt/Connect-Office365Services)
 ![GitHub Release](https://img.shields.io/github/v/release/michelderooij/Connect-Office365Services)
-https://img.shields.io/github/stars/michelderooij/Connect-Office365Services
+![GitHub Repo stars](https://img.shields.io/github/stars/michelderooij/Connect-Office365Services)
 
 PowerShell module providing functions to connect to Microsoft 365 online services and Exchange On-Premises, as well as perform module management.
 
