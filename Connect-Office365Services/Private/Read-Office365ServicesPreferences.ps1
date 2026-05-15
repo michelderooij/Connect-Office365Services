@@ -12,15 +12,17 @@ function Read-Office365ServicesPreferences {
         ProxyAccessType  = 'None'
         NoBanner         = $false
         NoQuote          = $false
+        NoReport         = $false
+        NoAutoConnect    = $false
     }
 
     $local:configPath = Join-Path -Path ([System.Environment]::GetFolderPath(
-        [System.Environment+SpecialFolder]::ApplicationData)) -ChildPath 'Office365Services\config.json'
+            [System.Environment+SpecialFolder]::ApplicationData)) -ChildPath 'Office365Services\config.json'
 
     if (Test-Path -Path $local:configPath -PathType Leaf) {
         try {
             $local:json = Get-Content -Path $local:configPath -Raw -ErrorAction Stop |
-                ConvertFrom-Json -ErrorAction Stop
+            ConvertFrom-Json -ErrorAction Stop
             foreach ($local:key in @($local:defaults.Keys)) {
                 $local:prop = $local:json.PSObject.Properties[$local:key]
                 if ($null -ne $local:prop) {

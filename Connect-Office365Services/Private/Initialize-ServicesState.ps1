@@ -22,20 +22,35 @@ function Initialize-ServicesState {
 
     # Proxy / session options
     $script:myOffice365Services['ProxyAccessType'] = [string]$local:prefs['ProxyAccessType']
-    $script:myOffice365Services['SessionOptions']  = New-PSSessionOption -ProxyAccessType $local:prefs['ProxyAccessType']
+    $script:myOffice365Services['SessionOptions'] = New-PSSessionOption -ProxyAccessType $local:prefs['ProxyAccessType']
 
-    # Banner / quote suppression
+    # Banner / quote / report suppression
     $script:myOffice365Services['NoBanner'] = [bool]$local:prefs['NoBanner']
-    $script:myOffice365Services['NoQuote']  = [bool]$local:prefs['NoQuote']
+    $script:myOffice365Services['NoQuote'] = [bool]$local:prefs['NoQuote']
+    $script:myOffice365Services['NoReport'] = [bool]$local:prefs['NoReport']
+    $script:myOffice365Services['NoAutoConnect'] = [bool]$local:prefs['NoAutoConnect']
+
+    # Per-service connection flags (session-only; reset on module re-import)
+    $script:myOffice365Services['ConnectedEXO'] = $false
+    $script:myOffice365Services['ConnectedSCC'] = $false
+    $script:myOffice365Services['ConnectedSPO'] = $false
+    $script:myOffice365Services['ConnectedTeams'] = $false
+    $script:myOffice365Services['ConnectedAIP'] = $false
+    $script:myOffice365Services['ConnectedPowerApps'] = $false
+    $script:myOffice365Services['ConnectedExchange'] = $false
+    $script:myOffice365Services['ConnectedGraph'] = $false
+    $script:myOffice365Services['ConnectedPowerBI'] = $false
+    $script:myOffice365Services['ConnectedPnP'] = $false
+    $script:myOffice365Services['PnPSiteUrl'] = ''
 
     # Modern auth state (populated by Get-Office365Credential / Get-Office365AccessToken)
-    $script:myOffice365Services['Office365UPN']   = ''
-    $script:myOffice365Services['MsalAccount']    = $null
-    $script:myOffice365Services['MsalApp']             = $null   # PublicClientApplication instance — Graph Command Line Tools (MSAL.NET)
+    $script:myOffice365Services['Office365UPN'] = ''
+    $script:myOffice365Services['MsalAccount'] = $null
+    $script:myOffice365Services['MsalApp'] = $null   # PublicClientApplication instance — Graph Command Line Tools (MSAL.NET)
     $script:myOffice365Services['MsalTokenCacheBytes'] = $null   # serialized MSAL token cache — persists Graph tokens across PCA rebuilds
-    $script:myOffice365Services['MsalNetWarned']       = $false  # suppress repeated "MSAL.NET not found" warnings
+    $script:myOffice365Services['MsalNetWarned'] = $false  # suppress repeated "MSAL.NET not found" warnings
     # Well-known Microsoft Graph Command Line Tools public client — override via Set-Office365ServicesPreferences if needed
-    $script:myOffice365Services['MsalClientId']   = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
+    $script:myOffice365Services['MsalClientId'] = '14d82eec-204b-4c2f-b7e8-296a70dab67e'
 
     # Initialize environment & endpoints
     Set-Office365Environment -Environment $local:prefs['AzureEnvironment']

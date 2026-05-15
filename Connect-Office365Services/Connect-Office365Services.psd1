@@ -1,7 +1,7 @@
 @{
     # Module identity
     RootModule        = 'Connect-Office365Services.psm1'
-    ModuleVersion     = '4.0.4'
+    ModuleVersion     = '4.0.5'
     GUID              = '6b44e9b9-f24f-4b27-bce0-bfef01a75d31'
     Author            = 'Michel de Rooij'
     CompanyName       = 'EighTwOne'
@@ -13,7 +13,7 @@
 
     # Functions exported from this module
     FunctionsToExport = @(
-        # Connect functions
+        # Connect / disconnect functions
         'Connect-EXO',
         'Connect-Exchange',
         'Connect-SCC',
@@ -21,7 +21,11 @@
         'Connect-AIP',
         'Connect-SPO',
         'Connect-PowerApps',
+        'Connect-MG',
+        'Connect-PowerBI',
+        'Connect-PnP',
         'Connect-Office365',
+        'Disconnect-Office365',
 
         # Credential / Identity functions
         'Get-Office365Credential',
@@ -30,9 +34,14 @@
         'Get-ExchangeOnPremisesFQDN',
         'Get-TenantID',
 
-        # Environment
+        # Session / connectivity
+        'Get-Office365Session',
+        'Test-Office365Connectivity',
+
+        # Environment / preferences
         'Set-Office365Environment',
         'Get-Office365Services',
+        'Get-Office365ServicesPreferences',
         'Set-Office365ServicesPreferences',
 
         # Module management

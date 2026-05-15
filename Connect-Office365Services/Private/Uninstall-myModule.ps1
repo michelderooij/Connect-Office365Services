@@ -32,23 +32,31 @@ function Uninstall-myModule {
                 $local:CmdletSuccess= $true
             }
             Catch {
-                Switch -Regex ($PSItem.FullyQualifiedErrorId) {
-                    '^AdminPrivilegesRequiredForUninstall,' {
-                        Write-Warning ('Unable to uninstall {0} v{1}: Administrator rights required' -f $Name, $Version)
-                        $local:FatalError= $true
-                    }
-                    '^(UnableToUninstallAsOtherModulesNeedThisModule|UninstallPSResourcePackageIsaDependency),' {
-                        Write-Warning ('Unable to uninstall {0} v{1}: other modules depend on it' -f $Name, $Version)
-                        $local:FatalError= $true
-                    }
-                    Default {
-                        If( $local:Attempt -ge $local:MaxRetries) {
-                            Write-Warning ('Problem uninstalling {0} v{1}: {2}' -f $Name, $Version, $PSItem.Exception.Message)
+                # Some cmdlets (e.g. Uninstall-PSResource) throw a terminating error even when
+                # the uninstall actually succeeded. Verify by checking whether the module folder
+                # is still present before treating the exception as a real failure.
+                If( -not (Get-ModuleInstallPath -Name $Name -Version ([string]$Version))) {
+                    $local:CmdletSuccess= $true
+                }
+                Else {
+                    Switch -Regex ($PSItem.FullyQualifiedErrorId) {
+                        '^AdminPrivilegesRequiredForUninstall,' {
+                            Write-Warning ('Unable to uninstall {0} v{1}: Administrator rights required' -f $Name, $Version)
+                            $local:FatalError= $true
+                        }
+                        '^(UnableToUninstallAsOtherModulesNeedThisModule|UninstallPSResourcePackageIsaDependency),' {
+                            Write-Warning ('Unable to uninstall {0} v{1}: other modules depend on it' -f $Name, $Version)
+                            $local:FatalError= $true
+                        }
+                        Default {
+                            If( $local:Attempt -ge $local:MaxRetries) {
+                                Write-Warning ('Problem uninstalling {0} v{1}: {2}' -f $Name, $Version, $PSItem.Exception.Message)
+                            }
                         }
                     }
-                }
-                If( -not $local:FatalError -and -not $local:CmdletSuccess -and $local:Attempt -lt $local:MaxRetries) {
-                    Start-Sleep -Seconds 1
+                    If( -not $local:FatalError -and -not $local:CmdletSuccess -and $local:Attempt -lt $local:MaxRetries) {
+                        Start-Sleep -Seconds 1
+                    }
                 }
             }
         }

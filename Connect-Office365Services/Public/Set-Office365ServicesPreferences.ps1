@@ -1,17 +1,17 @@
 function Set-Office365ServicesPreferences {
     <#
     .SYNOPSIS
-    View or set persistent user preferences for Connect-Office365Services.
+    Set persistent user preferences for Connect-Office365Services.
 
     .DESCRIPTION
-    When called without parameters, displays the current preference values.
-    When one or more parameters are supplied, the values are updated in the
-    active module state and written to:
+    Updates the supplied preference values in the active module state and
+    writes them to:
         %APPDATA%\Office365Services\config.json
 
     The config file is read on every module import. If the file does not yet
     exist, built-in defaults are used. The file is created the first time any
-    preference is changed.
+    preference is changed. Use Get-Office365ServicesPreferences to view the
+    current preference values.
 
     .PARAMETER AllowPrerelease
     Whether to include prerelease versions when finding, installing, or updating
@@ -40,9 +40,14 @@ function Set-Office365ServicesPreferences {
     When set to $true, suppresses the random quote shown during module import.
     Defaults to $false.
 
-    .EXAMPLE
-    Set-Office365ServicesPreferences
-    Displays the current preference values.
+    .PARAMETER NoReport
+    When set to $true, suppresses the list of found modules shown during module import.
+    Defaults to $false.
+
+    .PARAMETER NoAutoConnect
+    When set to $true, prevents the connect functions from prompting for credentials
+    automatically. Run Get-Office365Credential explicitly before connecting.
+    Defaults to $false.
 
     .EXAMPLE
     Set-Office365ServicesPreferences -AllowPrerelease $true -Scope CurrentUser
@@ -67,21 +72,12 @@ function Set-Office365ServicesPreferences {
 
         [System.Nullable[bool]]$NoBanner,
 
-        [System.Nullable[bool]]$NoQuote
-    )
+        [System.Nullable[bool]]$NoQuote,
 
-    # ── No parameters: display current preferences ────────────────────────────
-    if ($PSBoundParameters.Count -eq 0) {
-        [PSCustomObject][ordered]@{
-            AllowPrerelease  = [bool]$script:myOffice365Services['AllowPrerelease']
-            AzureEnvironment = [string]$script:myOffice365Services['AzureEnvironmentName']
-            Scope            = [string]$script:myOffice365Services['Scope']
-            ProxyAccessType  = [string]$script:myOffice365Services['ProxyAccessType']
-            NoBanner         = [bool]$script:myOffice365Services['NoBanner']
-            NoQuote          = [bool]$script:myOffice365Services['NoQuote']
-        }
-        return
-    }
+        [System.Nullable[bool]]$NoReport,
+
+        [System.Nullable[bool]]$NoAutoConnect
+    )
 
     # ── Apply each supplied preference to module state ────────────────────────
     $local:changed = $false
@@ -117,8 +113,19 @@ function Set-Office365ServicesPreferences {
         $local:changed = $true
     }
 
+    if ($PSBoundParameters.ContainsKey('NoReport')) {
+        $script:myOffice365Services['NoReport'] = [bool]$NoReport
+        $local:changed = $true
+    }
+
+    if ($PSBoundParameters.ContainsKey('NoAutoConnect')) {
+        $script:myOffice365Services['NoAutoConnect'] = [bool]$NoAutoConnect
+        $local:changed = $true
+    }
+
     # ── Persist to config.json when anything changed ──────────────────────────
     if ($local:changed) {
         Save-Office365ServicesPreferences
+        Get-Office365ServicesPreferences
     }
 }

@@ -32,6 +32,8 @@ function Save-Office365ServicesPreferences {
     $local:existing['ProxyAccessType']  = [string]$script:myOffice365Services['ProxyAccessType']
     $local:existing['NoBanner']         = [bool]$script:myOffice365Services['NoBanner']
     $local:existing['NoQuote']          = [bool]$script:myOffice365Services['NoQuote']
+    $local:existing['NoReport']         = [bool]$script:myOffice365Services['NoReport']
+    $local:existing['NoAutoConnect']    = [bool]$script:myOffice365Services['NoAutoConnect']
 
     $local:existing | ConvertTo-Json -Depth 5 | Set-Content -Path $local:configPath -Encoding UTF8 -Force
     Write-Verbose ('Preferences saved to ''{0}''' -f $local:configPath)

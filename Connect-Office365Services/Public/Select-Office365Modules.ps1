@@ -36,8 +36,8 @@ function Select-Office365Modules {
 
     $script:myOffice365Services['AllowPrerelease'] = if ($PSBoundParameters.ContainsKey('AllowPrerelease')) { $AllowPrerelease.IsPresent } else { [bool]$script:myOffice365Services['AllowPrerelease'] }
 
-    # Get module information
-    $local:ModuleInfo = Get-Office365ModuleInfo
+    # Get module information, excluding this module itself
+    $local:ModuleInfo = Get-Office365ModuleInfo | Where-Object { $_.Module -ne $MyInvocation.MyCommand.Module.Name }
     $local:CurrentSelection = @{}
     $local:SelectedIndex = 0
     $local:MaxIndex = $local:ModuleInfo.Count - 1
@@ -60,12 +60,12 @@ function Select-Office365Modules {
 
         for ($i = 0; $i -lt $ModuleInfo.Count; $i++) {
             $module = $ModuleInfo[$i]
-            $isSelected  = $CurrentSelection[$module.Module]
-            $isReadOnly  = $module.ReplacedBy -and -not $isSelected
-            $checkbox    = if ($isReadOnly) { ' - ' } elseif ($isSelected) { '[x]' } else { '[ ]' }
-            $prefix    = if ($i -eq $SelectedIndex) { '>' } else { ' ' }
+            $isSelected = $CurrentSelection[$module.Module]
+            $isReadOnly = $module.ReplacedBy -and -not $isSelected
+            $checkbox = if ($isReadOnly) { ' - ' } elseif ($isSelected) { '[x]' } else { '[ ]' }
+            $prefix = if ($i -eq $SelectedIndex) { '>' } else { ' ' }
             $replacedBySuffix = if ($module.ReplacedBy) { ' (Replaced by: {0})' -f $module.ReplacedBy } else { '' }
-            $line      = '{0} {1} {2}{3}' -f $prefix, $checkbox, $module.Description, $replacedBySuffix
+            $line = '{0} {1} {2}{3}' -f $prefix, $checkbox, $module.Description, $replacedBySuffix
 
             if ($i -eq $SelectedIndex) {
                 Write-Host $line -ForegroundColor White
@@ -82,12 +82,12 @@ function Select-Office365Modules {
         Write-Host 'Up/Down: navigate  Space: toggle  S: scope  Enter: confirm  Esc: cancel'
     }
 
-    # Compute menu line count for in-place redraw (9 fixed lines + 1 per module)
-    $local:menuLineCount = 9 + $local:ModuleInfo.Count
-    $local:menuTopRow    = -1
+    # Compute menu line count for in-place redraw (8 fixed lines + 1 per module)
+    $local:menuLineCount = 8 + $local:ModuleInfo.Count
+    $local:menuTopRow = -1
 
     # Main menu loop
-    $exitMenu  = $false
+    $exitMenu = $false
     $committed = $false
 
     while (-not $exitMenu) {
@@ -104,21 +104,24 @@ function Select-Office365Modules {
         $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
 
         switch ($key.VirtualKeyCode) {
-            38 { # Up arrow
+            38 {
+                # Up arrow
                 $local:next = $local:SelectedIndex - 1
                 while ($local:next -ge 0 -and $local:ModuleInfo[$local:next].ReplacedBy -and -not $local:CurrentSelection[$local:ModuleInfo[$local:next].Module]) {
                     $local:next--
                 }
                 if ($local:next -ge 0) { $local:SelectedIndex = $local:next }
             }
-            40 { # Down arrow
+            40 {
+                # Down arrow
                 $local:next = $local:SelectedIndex + 1
                 while ($local:next -le $local:MaxIndex -and $local:ModuleInfo[$local:next].ReplacedBy -and -not $local:CurrentSelection[$local:ModuleInfo[$local:next].Module]) {
                     $local:next++
                 }
                 if ($local:next -le $local:MaxIndex) { $local:SelectedIndex = $local:next }
             }
-            32 { # Spacebar — toggle selection
+            32 {
+                # Spacebar — toggle selection
                 $currentModuleInfo = $local:ModuleInfo[$local:SelectedIndex]
                 # Deprecated modules (ReplacedBy) can only be deselected when installed; cannot be installed fresh
                 if ($currentModuleInfo.ReplacedBy -and -not $local:CurrentSelection[$currentModuleInfo.Module]) {
@@ -128,7 +131,8 @@ function Select-Office365Modules {
                     $local:CurrentSelection[$currentModuleInfo.Module] = -not $local:CurrentSelection[$currentModuleInfo.Module]
                 }
             }
-            83 { # S — toggle scope
+            83 {
+                # S — toggle scope
                 if ($script:myOffice365Services['Scope'] -eq 'AllUsers') {
                     $script:myOffice365Services['Scope'] = 'CurrentUser'
                 }
@@ -137,12 +141,14 @@ function Select-Office365Modules {
                 }
                 Save-Office365ServicesPreferences
             }
-            13 { # Enter — commit
-                $exitMenu  = $true
+            13 {
+                # Enter — commit
+                $exitMenu = $true
                 $committed = $true
             }
-            27 { # Escape — cancel
-                $exitMenu  = $true
+            27 {
+                # Escape — cancel
+                $exitMenu = $true
                 $committed = $false
             }
         }
@@ -157,13 +163,13 @@ function Select-Office365Modules {
     Write-Host 'Processing module changes...'
     Write-Host ''
 
-    $modulesToInstall   = @()
+    $modulesToInstall = @()
     $modulesToUninstall = @()
     $local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
 
     foreach ($module in $local:ModuleInfo) {
-        $moduleName          = $module.Module
-        $shouldBeInstalled   = $local:CurrentSelection[$moduleName]
+        $moduleName = $module.Module
+        $shouldBeInstalled = $local:CurrentSelection[$moduleName]
 
         $installedModule = Get-InstalledRepoModule -Name $moduleName -Repo $module.Repo -AllInstalled $local:AllInstalled
         $isCurrentlyInstalled = $null -ne $installedModule
@@ -194,7 +200,7 @@ function Select-Office365Modules {
         Write-Host ('Uninstalling {0}...' -f $module.Description)
         try {
             $allVersions = Get-Module -Name $module.Module -ListAvailable |
-                Where-Object { $_.RepositorySourceLocation -and ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority }
+            Where-Object { $_.RepositorySourceLocation -and ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority }
             foreach ($version in $allVersions) {
                 Uninstall-myModule -Name $version.Name -Version $version.Version -IsPrerelease:$version.IsPrerelease
             }

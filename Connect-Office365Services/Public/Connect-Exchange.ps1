@@ -1,10 +1,19 @@
 function Connect-Exchange {
-    If ( !($script:myOffice365Services['OnPremisesCredential'])) { Get-OnPremisesCredential }
+    If ( !($script:myOffice365Services['OnPremisesCredential'])) {
+        If ($script:myOffice365Services['NoAutoConnect']) {
+            Write-Error 'No credentials cached. Run Get-OnPremisesCredential first.'
+            return
+        }
+        Get-OnPremisesCredential
+    }
     If ( !($script:myOffice365Services['ExchangeOnPremisesFQDN'])) { Get-ExchangeOnPremisesFQDN }
     # Fixed: removed erroneous '!' — only connect when credentials ARE present
     If ( $script:myOffice365Services['OnPremisesCredential']) {
         Write-Host ('Connecting to Exchange On-Premises {0} using {1} ..' -f $script:myOffice365Services['ExchangeOnPremisesFQDN'], $script:myOffice365Services['OnPremisesCredential'].UserName)
         $script:myOffice365Services['SessionExchange'] = New-PSSession -ConfigurationName Microsoft.Exchange -ConnectionUri "http://$($script:myOffice365Services['ExchangeOnPremisesFQDN'])/PowerShell" -Credential $script:myOffice365Services['OnPremisesCredential'] -Authentication Kerberos -AllowRedirection -SessionOption $script:myOffice365Services['SessionOptions']
-        If ( $script:myOffice365Services['SessionExchange']) {Import-PSSession -Session $script:myOffice365Services['SessionExchange'] -AllowClobber}
+        If ( $script:myOffice365Services['SessionExchange']) {
+            Import-PSSession -Session $script:myOffice365Services['SessionExchange'] -AllowClobber
+            $script:myOffice365Services['ConnectedExchange'] = $true
+        }
     }
 }

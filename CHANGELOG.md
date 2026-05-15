@@ -1,10 +1,29 @@
 # Changelog
 
-## v4.0.4
-- Fixed: `Update-Office365Modules` and `Optimize-Office365Modules` crashed with "not recognized" errors for all private functions after updating `Connect-Office365Services` itself. Root cause: the uninstall helper called `Remove-Module` on the currently running module, wiping all private functions from the session mid-execution. The self-removal is now skipped; the module files are still replaced on disk by the package manager.
+## v4.0.5
+- Added: `NoReport` preference to suppress the installed-module list shown on module import.
+- Added: `Disconnect-Office365` to disconnect one or more services, opposite of Connect-Office365.
+- Added: `Get-Office365Session` to display the active identity (UPN, TenantID, Environment) and per-service connection status.
+- Added: `Test-Office365Connectivity` to test reachability of key Microsoft 365 endpoints.
+- Added: `Get-Office365ServicesPreferences` to display all current preference values and the preferences file location.
+- Added: `Connect-MG` to connect to Microsoft Graph using the cached identity (MSAL token) or interactive sign-in via `Connect-MgGraph`.
+- Added: `Connect-PowerBI` to connect to the Power BI service using the cached identity (MSAL token) or interactive sign-in via `Connect-PowerBIServiceAccount`.
+- Added: `Connect-PnP` to connect to a SharePoint site collection using PnP PowerShell; defaults to the tenant root site when `-SiteUrl` is omitted.
+- Added: `NoAutoConnect` preference to suppress automatic credential prompts in connect functions; credentials must be cached via `Get-Office365Credential` first.
+- Changed: each connect function now sets a session-scoped `Connected*` flag (`ConnectedEXO`, `ConnectedSCC`, etc.) that `Get-Office365Session` and `Disconnect-Office365` rely on.
+- Changed: `Connect-Office365` now accepts a `-Service` parameter with the same values as `Disconnect-Office365`; default behaviour (no parameter) is unchanged (EXO, Teams, SCC, SPO).
+- Changed: `Disconnect-Office365` now handles `Graph`, `PowerBI`, and `PnP` in addition to all existing services.
+- Changed: `Get-Office365Session` now shows connection status for Microsoft Graph (enriched via `Get-MgContext`), Power BI, and PnP (showing the connected site URL) in addition to all existing services.
+- Fixed: module guard in `Connect-SPO`, `Connect-MSTeams`, `Connect-AIP`, and `Connect-PowerApps` now checks whether the module is loaded rather than installed, so modules installed in CurrentUser scope are correctly imported into the session.
+- Fixed: `Connect-SPO` now resolves the tenant name automatically from the UPN (onmicrosoft.com) or via the Graph domains API; falls back to `Get-Office365Tenant` as last resort before erroring.
+- Fixed: `Connect-SPO` now injects an MSAL token via `-AccessToken` when available; falls back to `-Credential` when not, preventing "No valid OAuth 2.0 authentication session exists" errors.
+- Fixed: `Connect-MSTeams` no longer attempts to acquire a Teams-service (`api.spaces.skype.com`) token, which was unavailable through the MSAL app and caused `AADSTS650057`; MSAL.Broker assembly conflicts are now suppressed silently rather than retried with device-code authentication.
 
-## v4.0.3
-- Added: `Get-Office365Credential` now acquires a Graph token via MSAL.NET to seed the authentication session; `Connect-EXO`, `Connect-SCC`, `Connect-MSTeams`, `Connect-SPO`, `Connect-PowerApps`, and `Connect-AIP` reuse the cached identity so the user is not prompted again in the same session.
+## v4.0.4
+- Fixed: `Update-Office365Modules` and `Optimize-Office365Modules` after updating `Connect-Office365Services` itself.
+
+## v4.0.3Any su
+- Added: `Get-Office365Credential` now acquires a Graph token via MSAL.NET to seed the authentication session.
 - Changed: `Get-OnPremisesCredentials` renamed to `Get-OnPremisesCredential` (singular) for consistency.
 - Added: `Set-Office365Environment` now sets the `EOMEnvironmentName` for all environments so `Connect-EXO` and `Connect-SCC` route sovereign-cloud connections correctly.
 

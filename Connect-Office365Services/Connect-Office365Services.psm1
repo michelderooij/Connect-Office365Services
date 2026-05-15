@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0.4'
+$local:ModuleVersion = '4.0.5'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
@@ -73,15 +73,17 @@ if (-not $script:myOffice365Services['NoBanner']) {
 }
 
 # ── List installed modules ────────────────────────────────────────────────────
-$local:Functions = Get-Office365ModuleInfo
-$local:Functions | ForEach-Object -Process {
-    $local:Item = $_
-    $local:Module = Get-InstalledRepoModule -Name $local:Item.Module -Repo $local:Item.Repo -AllInstalled $local:AllInstalled
-    if ($local:Module) {
-        $local:Version = Get-ModuleVersionInfo -Module $local:Module
-        Write-Host ('Found {0} (v {1})' -f $local:Item.Description, $local:Version)
-        if ($local:Item.ReplacedBy) {
-            Write-Warning ('{0} replaced by {1}' -f $local:Item.Module, $local:Item.ReplacedBy)
+if (-not $script:myOffice365Services['NoReport']) {
+    $local:Functions = Get-Office365ModuleInfo
+    $local:Functions | ForEach-Object -Process {
+        $local:Item = $_
+        $local:Module = Get-InstalledRepoModule -Name $local:Item.Module -Repo $local:Item.Repo -AllInstalled $local:AllInstalled
+        if ($local:Module) {
+            $local:Version = Get-ModuleVersionInfo -Module $local:Module
+            Write-Host ('Found {0} (v{1})' -f $local:Item.Description, $local:Version)
+            if ($local:Item.ReplacedBy) {
+                Write-Warning ('{0} replaced by {1}' -f $local:Item.Module, $local:Item.ReplacedBy)
+            }
         }
     }
 }

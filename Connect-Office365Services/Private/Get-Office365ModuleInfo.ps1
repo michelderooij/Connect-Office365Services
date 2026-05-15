@@ -129,22 +129,22 @@ function Get-Office365ModuleInfo {
     },
     {
         "Module": "O365CentralizedAddInDeployment",
-        "Description": "O365 Centralized Add-In Deployment Module",
+        "Description": "O365 Centralized Add-In Deployment",
         "Repo": "https://www.powershellgallery.com/packages/O365CentralizedAddInDeployment"
     },
     {
         "Module": "ORCA",
-        "Description": "Microsoft Defender for Office 365 Recommended Configuration Analyzer (ORCA)",
+        "Description": "MDO Recommended Configuration Analyzer (ORCA)",
         "Repo": "https://www.powershellgallery.com/packages/ORCA"
     },
     {
         "Module": "Connect-Office365Services",
-        "Description": "Connect-Office365Services for Office 365 Connectivity & Module Management.",
+        "Description": "Connect-Office365Services",
         "Repo": "https://www.powershellgallery.com/packages/Connect-Office365Services"
     },
     {
         "Module": "MSAL.PS",
-        "Description": "Microsoft Authentication Library (MSAL) for PowerShell",
+        "Description": "MSAL for PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/MSAL.PS"
     },
 

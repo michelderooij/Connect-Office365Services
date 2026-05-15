@@ -5,6 +5,10 @@ function Connect-SCC {
     if (Get-Command -Name ExchangeOnlineManagement\Connect-IPPSSession -ErrorAction SilentlyContinue) {
         # Ensure we have an account cached (MSAL) or credentials (legacy)
         if ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
+            if ($script:myOffice365Services['NoAutoConnect']) {
+                Write-Error 'No credentials cached. Run Get-Office365Credential first or supply credentials explicitly.'
+                return
+            }
             Get-Office365Credential
         }
 
@@ -55,6 +59,7 @@ function Connect-SCC {
         if ( $script:myOffice365Services['SessionCC'] ) {
             Import-PSSession -Session $script:myOffice365Services['SessionCC'] -AllowClobber
         }
+        $script:myOffice365Services['ConnectedSCC'] = $true
     }
     else {
         Write-Error -Message 'Cannot connect to Security & Compliance Center - module not installed or not loading.'
