@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0.5'
+$local:ModuleVersion = '4.0.6'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
@@ -42,19 +42,48 @@ $script:myConsoleColors = [PSCustomObject]@{
     Muted   = [System.ConsoleColor]::White
 }
 
-# ── Detect PSResourceGet availability ────────────────────────────────────────
-# NOTE: called after the AllInstalled pre-fetch so it re-uses the cached list
-#       instead of triggering a second filtered Get-Module -ListAvailable scan.
+# ── Detect PSResourceGet + gather module inventory ────────────────────────────
+# Get-Module -ListAvailable scans every module directory (~6-12 s with 400+ modules).
+# Instead, pre-fetch the report module list (cheap in-memory JSON parse) and pass its
+# names as a -Name filter so PowerShell resolves only the specific module folders.
+#   - NoReport=false  → targeted query for ~30 report modules (+ banner modules when needed)
+#   - NoBanner=false, NoReport=true → targeted 2-module query (banner version numbers only)
+#   - Both true       → no scan at all
 
-# ── Banner ────────────────────────────────────────────────────────────────────
-$local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
+# Pre-load the Office 365 module list now (JSON literal, zero I/O) so the name array
+# drives the targeted Get-Module query and the result is reused in the report loop.
+$local:ReportFunctions = $null
+if (-not $script:myOffice365Services['NoReport']) {
+    $local:ReportFunctions = Get-Office365ModuleInfo
+}
+
+$local:AllInstalled = $null
+if (-not $script:myOffice365Services['NoReport']) {
+    # Targeted scan: only the module names the report loop will query.
+    # Get-Module -Name resolves specific module folders rather than enumerating all directories.
+    $local:ScanNames = @($local:ReportFunctions.Module)
+    if (-not $script:myOffice365Services['NoBanner']) {
+        # Fold banner modules into the same single query to avoid a second scan.
+        $local:ScanNames += 'Microsoft.PowerShell.PSResourceGet', 'PackageManagement'
+    }
+    $local:AllInstalled = Get-Module -Name $local:ScanNames -ListAvailable -ErrorAction SilentlyContinue
+} elseif (-not $script:myOffice365Services['NoBanner']) {
+    # Targeted query — sufficient for banner version numbers.
+    $local:AllInstalled = Get-Module -Name 'Microsoft.PowerShell.PSResourceGet', 'PackageManagement' `
+        -ListAvailable -ErrorAction SilentlyContinue
+}
+
 Get-myPSResourceGetInstalled -AllInstalled $local:AllInstalled
-$local:PSGetModule = $local:AllInstalled | Where-Object { $_.Name -eq 'Microsoft.PowerShell.PSResourceGet' } |
-Sort-Object -Property Version -Descending | Select-Object -First 1
+$local:PSGetModule = if ($local:AllInstalled) {
+    $local:AllInstalled | Where-Object { $_.Name -eq 'Microsoft.PowerShell.PSResourceGet' } |
+    Sort-Object -Property Version -Descending | Select-Object -First 1
+}
 $local:PSGetVer = if ($local:PSGetModule) { $local:PSGetModule.Version } else { 'N/A' }
 
-$local:PackageManagementModule = $local:AllInstalled | Where-Object { $_.Name -eq 'PackageManagement' } |
-Sort-Object -Property Version -Descending | Select-Object -First 1
+$local:PackageManagementModule = if ($local:AllInstalled) {
+    $local:AllInstalled | Where-Object { $_.Name -eq 'PackageManagement' } |
+    Sort-Object -Property Version -Descending | Select-Object -First 1
+}
 $local:PMMVer = if ($local:PackageManagementModule) { $local:PackageManagementModule.Version } else { 'N/A' }
 
 $local:IsAdmin = Test-IsAdministrator
@@ -74,8 +103,7 @@ if (-not $script:myOffice365Services['NoBanner']) {
 
 # ── List installed modules ────────────────────────────────────────────────────
 if (-not $script:myOffice365Services['NoReport']) {
-    $local:Functions = Get-Office365ModuleInfo
-    $local:Functions | ForEach-Object -Process {
+    $local:ReportFunctions | ForEach-Object -Process {
         $local:Item = $_
         $local:Module = Get-InstalledRepoModule -Name $local:Item.Module -Repo $local:Item.Repo -AllInstalled $local:AllInstalled
         if ($local:Module) {

@@ -1,5 +1,8 @@
 # Changelog
 
+## v4.0.6
+- Performance: Optimized loading, should reduce import time significantly on systems with many installed modules.
+
 ## v4.0.5
 - Added: `NoReport` preference to suppress the installed-module list shown on module import.
 - Added: `Disconnect-Office365` to disconnect one or more services, opposite of Connect-Office365.
@@ -22,7 +25,7 @@
 ## v4.0.4
 - Fixed: `Update-Office365Modules` and `Optimize-Office365Modules` after updating `Connect-Office365Services` itself.
 
-## v4.0.3Any su
+## v4.0.3
 - Added: `Get-Office365Credential` now acquires a Graph token via MSAL.NET to seed the authentication session.
 - Changed: `Get-OnPremisesCredentials` renamed to `Get-OnPremisesCredential` (singular) for consistency.
 - Added: `Set-Office365Environment` now sets the `EOMEnvironmentName` for all environments so `Connect-EXO` and `Connect-SCC` route sovereign-cloud connections correctly.
