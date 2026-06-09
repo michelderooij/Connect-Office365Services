@@ -33,7 +33,14 @@ function Update-Office365Modules {
                 else {
                     Find-Module -Name $local:n -AllowPrerelease:$using:UsePre -ErrorAction SilentlyContinue
                 }
-                [PSCustomObject]@{ Name = $local:n; Version = if ($local:o) { [string]$local:o.Version }else { $null } }
+                $local:ver = if ($local:o) {
+                    if ($null -ne $local:o.Prerelease -and $local:o.Prerelease -ne '') {
+                        '{0}-{1}' -f $local:o.Version, $local:o.Prerelease
+                    }
+                    else { [string]$local:o.Version }
+                }
+                else { $null }
+                [PSCustomObject]@{ Name = $local:n; Version = $local:ver }
             } -ThrottleLimit 10 | ForEach-Object {
                 $script:myOffice365Services['OnlineVersionCache'][$_.Name] = [PSCustomObject]@{
                     Version = $_.Version; Fetched = [datetime]::Now
@@ -84,8 +91,12 @@ function Update-Office365Modules {
 
             if ( $local:NewerAvailable) {
                 $local:UpdateSuccess = $false
+                # If the target online version is a stable release (no '-' prerelease suffix),
+                # pass -Prerelease:$false so Install-PSResource installs the stable release
+                # rather than potentially re-installing the same prerelease.
+                $local:TargetIsPrerelease = $local:OnlineVer -match '-'
                 try {
-                    Update-myModule -Name $local:Item.Module -Scope $local:ModuleScope
+                    Update-myModule -Name $local:Item.Module -Scope $local:ModuleScope -Prerelease:$local:TargetIsPrerelease
                     $local:UpdateSuccess = $true
                 }
                 catch {
@@ -130,15 +141,19 @@ function Update-Office365Modules {
                                 }
                             }
                         }
-                        $local:OldModules = $local:ModuleVersions | Where-Object { $_.Version -ne $local:LatestVersion }
+                        # Compare using full version strings (including any prerelease suffix)
+                        # so that a freshly-installed prerelease like 3.2.29-nightly is not
+                        # mistakenly treated as old when $local:LatestVersion is '3.2.29-nightly'.
+                        $local:OldModules = $local:ModuleVersions | Where-Object { (Get-ModuleVersionInfo -Module $_) -ne $local:LatestVersion }
                         if ( $local:OldModules) {
                             foreach ( $OldModule in $local:OldModules) {
-                                Write-Host ('Uninstalling {0} version {1}' -f $local:Item.Description, $OldModule.Version)
+                                $local:OldFullVer = Get-ModuleVersionInfo -Module $OldModule
+                                Write-Host ('Uninstalling {0} version {1}' -f $local:Item.Description, $local:OldFullVer)
                                 try {
-                                    Uninstall-myModule -Name $OldModule.Name -Version $OldModule.Version -IsPrerelease:$OldModule.IsPrerelease
+                                    Uninstall-myModule -Name $OldModule.Name -Version $local:OldFullVer -IsPrerelease:($local:OldFullVer -match '-')
                                 }
                                 catch {
-                                    Write-Warning ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $OldModule.Version, $_.Exception.Message)
+                                    Write-Warning ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $local:OldFullVer, $_.Exception.Message)
                                 }
                             }
                         }

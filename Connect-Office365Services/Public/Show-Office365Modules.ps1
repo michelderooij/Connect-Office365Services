@@ -4,7 +4,7 @@ function Show-Office365Modules {
         [switch]$Refresh
     )
 
-    $local:Functions= Get-Office365ModuleInfo
+    $local:Functions = Get-Office365ModuleInfo
     $local:UsePre = if ($AllowPrerelease.IsPresent) { $true } else { [bool]$script:myOffice365Services['AllowPrerelease'] }
     if ($Refresh) { $script:myOffice365Services['OnlineVersionCache'].Clear() }
 
@@ -14,7 +14,7 @@ function Show-Office365Modules {
     # This avoids calling Get-InstalledRepoModule twice per module (once here for
     # the parallel pre-fetch name list, and again in the display loop).
     $local:InstalledMap = @{}
-    ForEach ($local:Item in $local:Functions) {
+    foreach ($local:Item in $local:Functions) {
         $local:m = Get-InstalledRepoModule -Name $local:Item.Module -Repo $local:Item.Repo -AllInstalled $local:AllInstalled
         if ($local:m) { $local:InstalledMap[$local:Item.Module] = $local:m }
     }
@@ -22,7 +22,7 @@ function Show-Office365Modules {
     # Pre-fetch online versions.
     # PS 7+: run lookups in parallel (ThrottleLimit 10) — reduces ~22 s to ~3 s.
     # PS 5.1: sequential; each lookup populates the cache so repeat calls are instant.
-    $local:Cache   = $script:myOffice365Services['OnlineVersionCache']
+    $local:Cache = $script:myOffice365Services['OnlineVersionCache']
     $local:ToFetch = $local:InstalledMap.Keys | Where-Object {
         $local:e = $local:Cache[$_]
         $null -eq $local:e -or ([datetime]::Now - $local:e.Fetched).TotalMinutes -ge 60
@@ -35,58 +35,67 @@ function Show-Office365Modules {
                 $local:n = $_
                 $local:o = if ($using:UsePSRG) {
                     Find-PSResource -Name $local:n -Prerelease:$using:UsePre -ErrorAction SilentlyContinue
-                } else {
+                }
+                else {
                     Find-Module -Name $local:n -AllowPrerelease:$using:UsePre -ErrorAction SilentlyContinue
                 }
-                [PSCustomObject]@{ Name=$local:n; Version=if($local:o){[string]$local:o.Version}else{$null} }
+                $local:ver = if ($local:o) {
+                    if ($null -ne $local:o.Prerelease -and $local:o.Prerelease -ne '') {
+                        '{0}-{1}' -f $local:o.Version, $local:o.Prerelease
+                    }
+                    else { [string]$local:o.Version }
+                }
+                else { $null }
+                [PSCustomObject]@{ Name = $local:n; Version = $local:ver }
             } -ThrottleLimit 10 | ForEach-Object {
                 # Write back to cache in the parent runspace (serial, thread-safe)
                 $script:myOffice365Services['OnlineVersionCache'][$_.Name] = [PSCustomObject]@{
                     Version = $_.Version; Fetched = [datetime]::Now
                 }
             }
-        } else {
+        }
+        else {
             # PS 5.1 sequential path — Get-OnlineModuleVersion caches each result
             foreach ($local:n in $local:ToFetch) { $null = Get-OnlineModuleVersion -Name $local:n }
         }
     }
 
     # Display loop — all online versions come from the cache (instant lookups)
-    ForEach ($local:Item in $local:Functions) {
+    foreach ($local:Item in $local:Functions) {
 
         $local:Module = $local:InstalledMap[$local:Item.Module]
 
-        If( $local:Module) {
+        if ( $local:Module) {
 
-            $local:Version    = Get-ModuleVersionInfo -Module $local:Module
-            $local:OnlineVer  = Get-OnlineModuleVersion -Name $local:Item.Module
+            $local:Version = Get-ModuleVersionInfo -Module $local:Module
+            $local:OnlineVer = Get-OnlineModuleVersion -Name $local:Item.Module
 
             Write-Host ('{0} v{1}' -f $local:Item.Description, $local:Version) -NoNewline
 
-            If( $local:OnlineVer) {
+            if ( $local:OnlineVer) {
                 Write-Host (' (Online v{0})' -f $local:OnlineVer) -NoNewline
             }
-            Else {
+            else {
                 Write-Host (' (Online N/A)') -NoNewline
             }
             Write-Host (', Scope:{0} - Status is ' -f (Get-ModuleScope -Module $local:Module)) -NoNewline
 
-            If( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $local:OnlineVer)) {
+            if ( [string]::IsNullOrEmpty( $local:Version) -or [string]::IsNullOrEmpty( $local:OnlineVer)) {
                 Write-Host ('Unknown') -ForegroundColor $script:myConsoleColors.Warning
             }
-            Else {
-                If( (Compare-TextVersionNumber -Version $local:Version -CompareTo $local:OnlineVer) -eq 1) {
+            else {
+                if ( (Compare-TextVersionNumber -Version $local:Version -CompareTo $local:OnlineVer) -eq 1) {
                     Write-Host ('Outdated') -ForegroundColor $script:myConsoleColors.Error
                 }
-                Else {
+                else {
                     Write-Host ('OK') -ForegroundColor $script:myConsoleColors.OK
                 }
             }
-            If( $local:Item.ReplacedBy) {
+            if ( $local:Item.ReplacedBy) {
                 Write-Warning ('{0} has been replaced by {1}' -f $local:Item.Module, $local:Item.ReplacedBy)
             }
         }
-        Else {
+        else {
             Write-Host ('{0} not installed' -f $local:Item.Description) -ForegroundColor $script:myConsoleColors.Muted
         }
     }

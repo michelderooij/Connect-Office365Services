@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.0.7
+- Fixed: Reporting on and updating of prerelease modules
+- Fixed: Old module versions uninstalling
+- Fixed: Dealing with 'nightly' tagged modules
+
 ## v4.0.6
 - Performance: Optimized loading, should reduce import time significantly on systems with many installed modules.
 

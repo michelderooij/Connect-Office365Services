@@ -4,6 +4,14 @@ function Get-ModuleVersionInfo {
     )
     $Module = $Module | Select-Object -First 1
 
+    # Fast path for PSResourceInfo objects (returned by Get-PSResource / Find-PSResource).
+    # These carry the prerelease tag in a dedicated .Prerelease string property, while
+    # .Version contains only the numeric part.  PSModuleInfo has no .Prerelease property
+    # so this branch is only taken for PSResourceInfo.
+    if ($Module.PSObject.Properties['Prerelease'] -and $Module.Prerelease) {
+        return ('{0}-{1}' -f $Module.Version.ToString(), $Module.Prerelease)
+    }
+
     # Fast path: prerelease tag already available in the PSModuleInfo object loaded
     # by PSResourceGet / PowerShellGet (avoids a Get-Content disk read per module).
     $local:prerelease = $null

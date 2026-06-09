@@ -17,7 +17,14 @@ function Get-OnlineModuleVersion {
         return $local:entry.Version
     }
     $local:online = Find-myModule -Name $Name -ErrorAction SilentlyContinue
-    $local:ver    = if ($local:online) { [string]$local:online.Version } else { $null }
+    # For PSResourceGet (Find-PSResource) results the prerelease tag is in .Prerelease;
+    # [string]$o.Version would strip it.  PowerShellGet v2 (Find-Module) embeds the tag
+    # in .Version already and has no .Prerelease property, so the conditional is safe for both.
+    $local:ver    = if ($local:online) {
+        if ($null -ne $local:online.Prerelease -and $local:online.Prerelease -ne '') {
+            '{0}-{1}' -f $local:online.Version, $local:online.Prerelease
+        } else { [string]$local:online.Version }
+    } else { $null }
     $local:cache[$Name] = [PSCustomObject]@{ Version = $local:ver; Fetched = [datetime]::Now }
     return $local:ver
 }

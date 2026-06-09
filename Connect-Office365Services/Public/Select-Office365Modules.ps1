@@ -202,7 +202,8 @@ function Select-Office365Modules {
             $allVersions = Get-Module -Name $module.Module -ListAvailable |
             Where-Object { $_.RepositorySourceLocation -and ([System.Uri]($_.RepositorySourceLocation)).Authority -ieq ([System.Uri]($module.Repo)).Authority }
             foreach ($version in $allVersions) {
-                Uninstall-myModule -Name $version.Name -Version $version.Version -IsPrerelease:$version.IsPrerelease
+                $local:FullVer = Get-ModuleVersionInfo -Module $version
+                Uninstall-myModule -Name $version.Name -Version $local:FullVer -IsPrerelease:($local:FullVer -match '-')
             }
             Write-Host ('  Uninstalled {0}' -f $module.Module)
         }

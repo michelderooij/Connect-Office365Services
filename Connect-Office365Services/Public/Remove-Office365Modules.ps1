@@ -32,12 +32,13 @@ function Optimize-Office365Modules {
                     ForEach( $OldModule in $local:OldModules) {
 
                         # Uninstall all old versions of the module
-                        Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version) -ForegroundColor White
+                        $local:OldFullVer = Get-ModuleVersionInfo -Module $OldModule
+                        Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $local:OldFullVer) -ForegroundColor White
                         Try {
-                            Uninstall-myModule -Name $OldModule.Name -Version $OldModule.Version -IsPrerelease:$OldModule.IsPrerelease
+                            Uninstall-myModule -Name $OldModule.Name -Version $local:OldFullVer -IsPrerelease:($local:OldFullVer -match '-')
                         }
                         Catch {
-                            Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $OldModule.Version, $Error[0].Exception.Message)
+                            Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $local:OldFullVer, $Error[0].Exception.Message)
                         }
                     }
                 }
@@ -63,12 +64,13 @@ function Optimize-Office365Modules {
 
                         ForEach( $OldModule in $local:OldModules) {
 
-                            Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version)
+                            $local:OldFullVer = Get-ModuleVersionInfo -Module $OldModule
+                            Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $local:OldFullVer)
                             Try {
-                                Uninstall-myModule -Name $OldModule.Name -Version $OldModule.Version -IsPrerelease:$OldModule.IsPrerelease
+                                Uninstall-myModule -Name $OldModule.Name -Version $local:OldFullVer -IsPrerelease:($local:OldFullVer -match '-')
                             }
                             Catch {
-                                Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $OldModule.Version, $Error[0].Exception.Message)
+                                Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $local:OldFullVer, $Error[0].Exception.Message)
                             }
                         }
                     }

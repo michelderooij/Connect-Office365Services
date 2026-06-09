@@ -33,12 +33,13 @@ function Optimize-Office365Modules {
                     foreach ( $OldModule in $local:OldModules) {
 
                         # Uninstall all old versions of the module
-                        Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version) -ForegroundColor White
+                        $local:OldFullVer = Get-ModuleVersionInfo -Module $OldModule
+                        Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $local:OldFullVer) -ForegroundColor White
                         try {
-                            Uninstall-myModule -Name $OldModule.Name -Version $OldModule.Version -IsPrerelease:$OldModule.IsPrerelease
+                            Uninstall-myModule -Name $OldModule.Name -Version $local:OldFullVer -IsPrerelease:($local:OldFullVer -match '-')
                         }
                         catch {
-                            Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $OldModule.Version, $Error[0].Exception.Message)
+                            Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $local:OldFullVer, $Error[0].Exception.Message)
                         }
                     }
                 }
@@ -64,12 +65,13 @@ function Optimize-Office365Modules {
 
                         foreach ( $OldModule in $local:OldModules) {
 
-                            Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $OldModule.Version)
+                            $local:OldFullVer = Get-ModuleVersionInfo -Module $OldModule
+                            Write-Host ('Uninstalling {0} v{1}' -f $OldModule.Name, $local:OldFullVer)
                             try {
-                                Uninstall-myModule -Name $OldModule.Name -Version $OldModule.Version -IsPrerelease:$OldModule.IsPrerelease
+                                Uninstall-myModule -Name $OldModule.Name -Version $local:OldFullVer -IsPrerelease:($local:OldFullVer -match '-')
                             }
                             catch {
-                                Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $OldModule.Version, $Error[0].Exception.Message)
+                                Write-Error ('Problem uninstalling {0} v{1}: {2}' -f $OldModule.Name, $local:OldFullVer, $Error[0].Exception.Message)
                             }
                         }
                     }
@@ -81,8 +83,7 @@ function Optimize-Office365Modules {
         }
 
         # Final sweep: hard-delete any remaining old version folders from PSModulePath
-        Write-Host ('')
-        Write-Host ('Performing final sweep for leftover module folders...')
+        Write-Verbose ('Performing sweep for leftover module folders')
         $local:SweptCount = 0
         foreach ($local:Item in $local:Functions) {
             $local:ModuleBasePaths = Get-ModuleInstallPath -Name $local:Item.Module
@@ -94,25 +95,20 @@ function Optimize-Office365Modules {
                     } -Descending | Select-Object -First 1
                     $local:OldFolders = $local:VersionFolders | Where-Object { $_.FullName -ne $local:LatestVersionFolder.FullName }
                     foreach ($local:OldFolder in $local:OldFolders) {
-                        Write-Host ('Hard-deleting leftover folder: {0}' -f $local:OldFolder.FullName) -ForegroundColor Yellow
+                        Write-Host ('Removing leftover folder {0} .. ' -f $local:OldFolder.FullName) -NoNewline
                         try {
                             Remove-Item -Path $local:OldFolder.FullName -Recurse -Force -ErrorAction Stop
-                            Write-Host ('  Deleted successfully') -ForegroundColor Green
+                            Write-Host ('OK') -ForegroundColor Green
                             $local:SweptCount++
                         }
                         catch {
-                            Write-Warning ('  Failed to delete {0}: {1}' -f $local:OldFolder.FullName, $_.Exception.Message)
+                            Write-Warning ('Failed to remove {0}: {1}' -f $local:OldFolder.FullName, $_.Exception.Message)
                         }
                     }
                 }
             }
         }
-        if ($local:SweptCount -eq 0) {
-            Write-Host ('No leftover folders found.') -ForegroundColor Green
-        }
-        else {
-            Write-Host ('Swept {0} leftover folder(s).' -f $local:SweptCount) -ForegroundColor Cyan
-        }
+        Write-Host ('Sweep complete, {0} leftover folders removed.' -f $local:SweptCount)
     }
     else {
         Write-Warning ('Script not running with elevated privileges; cannot remove modules')
