@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0.6'
+$local:ModuleVersion = '4.0.8'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
@@ -67,7 +67,8 @@ if (-not $script:myOffice365Services['NoReport']) {
         $local:ScanNames += 'Microsoft.PowerShell.PSResourceGet', 'PackageManagement'
     }
     $local:AllInstalled = Get-Module -Name $local:ScanNames -ListAvailable -ErrorAction SilentlyContinue
-} elseif (-not $script:myOffice365Services['NoBanner']) {
+}
+elseif (-not $script:myOffice365Services['NoBanner']) {
     # Targeted query — sufficient for banner version numbers.
     $local:AllInstalled = Get-Module -Name 'Microsoft.PowerShell.PSResourceGet', 'PackageManagement' `
         -ListAvailable -ErrorAction SilentlyContinue

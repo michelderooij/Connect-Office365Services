@@ -5,7 +5,11 @@ function Uninstall-myModule {
         [string]$Name,
         [Parameter(Mandatory=$true)]
         $Version,
-        [switch]$IsPrerelease
+        [switch]$IsPrerelease,
+        # When specified, overrides the session scope preference for the uninstall cmdlet.
+        # Pass the scope the module is actually installed in to avoid removing the wrong copy.
+        [ValidateSet('AllUsers', 'CurrentUser')]
+        [string]$Scope = $script:myOffice365Services['Scope']
     )
     Process {
         # Unload module from current session before attempting uninstall.
@@ -24,7 +28,7 @@ function Uninstall-myModule {
             $local:Attempt++
             Try {
                 If( $script:myOffice365Services['PSResourceGet']) {
-                    Uninstall-PSResource -Name $Name -Version ([string]$Version) -Scope $script:myOffice365Services['Scope'] -SkipDependencyCheck -Prerelease:$IsPrerelease -ErrorAction Stop
+                    Uninstall-PSResource -Name $Name -Version ([string]$Version) -Scope $Scope -SkipDependencyCheck -Prerelease:$IsPrerelease -ErrorAction Stop
                 }
                 Else {
                     Uninstall-Module -Name $Name -RequiredVersion ([string]$Version) -AllowPrerelease:$IsPrerelease -Force -ErrorAction Stop

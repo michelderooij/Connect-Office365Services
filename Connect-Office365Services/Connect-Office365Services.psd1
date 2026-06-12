@@ -1,7 +1,7 @@
 @{
     # Module identity
     RootModule        = 'Connect-Office365Services.psm1'
-    ModuleVersion     = '4.0.7'
+    ModuleVersion     = '4.0.8'
     GUID              = '6b44e9b9-f24f-4b27-bce0-bfef01a75d31'
     Author            = 'Michel de Rooij'
     CompanyName       = 'EighTwOne'
@@ -48,6 +48,7 @@
         'Select-Office365Modules',
         'Update-Office365Modules',
         'Optimize-Office365Modules',
+        'Move-Office365Modules',
         'Show-Office365Modules',
         'Save-Office365ModuleState',
         'Restore-Office365ModuleState',

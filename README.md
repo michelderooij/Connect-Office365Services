@@ -46,6 +46,7 @@ After importing the module, the following functions are available:
 * `Select-Office365Modules`         Interactively install/uninstall Office 365 PowerShell modules
 * `Update-Office365Modules`         Updates installed Office 365 modules
 * `Optimize-Office365Modules`       Removes old module versions
+* `Move-Office365Modules`           Moves installed modules between AllUsers and CurrentUser scope
 * `Show-Office365Modules`           Lists available and installed modules
 * `Save-Office365ModuleState`       Saves installed module versions to the preferences file
 * `Restore-Office365ModuleState`    Reinstalls modules from the saved state; use `-Recent` for latest versions

@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.0.8
+- Added: `Move-Office365Modules` to move all supported installed modules from one scope to the other (AllUsers ↔ CurrentUser). Requires administrator privileges. The Connect-Office365Services module itself is excluded.
+- Changed: `Select-Office365Modules` now shows `Connect-Office365Services` in the module list as a permanently checked, non-selectable entry labelled `(required)` instead of hiding it entirely.
+
 ## v4.0.7
 - Fixed: Reporting on and updating of prerelease modules
 - Fixed: Old module versions uninstalling

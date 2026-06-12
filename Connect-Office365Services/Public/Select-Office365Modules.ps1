@@ -36,8 +36,9 @@ function Select-Office365Modules {
 
     $script:myOffice365Services['AllowPrerelease'] = if ($PSBoundParameters.ContainsKey('AllowPrerelease')) { $AllowPrerelease.IsPresent } else { [bool]$script:myOffice365Services['AllowPrerelease'] }
 
-    # Get module information, excluding this module itself
-    $local:ModuleInfo = Get-Office365ModuleInfo | Where-Object { $_.Module -ne $MyInvocation.MyCommand.Module.Name }
+    # Get module information
+    $local:SelfModuleName = $MyInvocation.MyCommand.Module.Name
+    $local:ModuleInfo = Get-Office365ModuleInfo
     $local:CurrentSelection = @{}
     $local:SelectedIndex = 0
     $local:MaxIndex = $local:ModuleInfo.Count - 1
@@ -45,13 +46,18 @@ function Select-Office365Modules {
     # Initialize current selection based on installed modules
     $local:AllInstalled = Get-Module -ListAvailable -ErrorAction SilentlyContinue
     foreach ($module in $local:ModuleInfo) {
-        $installedModule = Get-InstalledRepoModule -Name $module.Module -Repo $module.Repo -AllInstalled $local:AllInstalled
-        $local:CurrentSelection[$module.Module] = $null -ne $installedModule
+        if ($module.Module -eq $local:SelfModuleName) {
+            $local:CurrentSelection[$module.Module] = $true
+        }
+        else {
+            $installedModule = Get-InstalledRepoModule -Name $module.Module -Repo $module.Repo -AllInstalled $local:AllInstalled
+            $local:CurrentSelection[$module.Module] = $null -ne $installedModule
+        }
     }
 
     # Display single-column menu
     function Show-ModuleMenu {
-        param($ModuleInfo, $CurrentSelection, $SelectedIndex)
+        param($ModuleInfo, $CurrentSelection, $SelectedIndex, $SelfModuleName)
 
         Write-Host 'Module Selection'
         Write-Host ('-' * 50)
@@ -61,11 +67,11 @@ function Select-Office365Modules {
         for ($i = 0; $i -lt $ModuleInfo.Count; $i++) {
             $module = $ModuleInfo[$i]
             $isSelected = $CurrentSelection[$module.Module]
-            $isReadOnly = $module.ReplacedBy -and -not $isSelected
-            $checkbox = if ($isReadOnly) { ' - ' } elseif ($isSelected) { '[x]' } else { '[ ]' }
+            $isSelf = $module.Module -eq $SelfModuleName
+            $checkbox = if ($module.ReplacedBy -and -not $isSelected) { ' - ' } elseif ($isSelf -or $isSelected) { '[x]' } else { '[ ]' }
             $prefix = if ($i -eq $SelectedIndex) { '>' } else { ' ' }
-            $replacedBySuffix = if ($module.ReplacedBy) { ' (Replaced by: {0})' -f $module.ReplacedBy } else { '' }
-            $line = '{0} {1} {2}{3}' -f $prefix, $checkbox, $module.Description, $replacedBySuffix
+            $suffix = if ($isSelf) { ' (required)' } elseif ($module.ReplacedBy) { ' (Replaced by: {0})' -f $module.ReplacedBy } else { '' }
+            $line = '{0} {1} {2}{3}' -f $prefix, $checkbox, $module.Description, $suffix
 
             if ($i -eq $SelectedIndex) {
                 Write-Host $line -ForegroundColor White
@@ -95,7 +101,7 @@ function Select-Office365Modules {
             $Host.UI.RawUI.CursorPosition = [System.Management.Automation.Host.Coordinates]::new(0, $local:menuTopRow)
         }
 
-        Show-ModuleMenu -ModuleInfo $local:ModuleInfo -CurrentSelection $local:CurrentSelection -SelectedIndex $local:SelectedIndex
+        Show-ModuleMenu -ModuleInfo $local:ModuleInfo -CurrentSelection $local:CurrentSelection -SelectedIndex $local:SelectedIndex -SelfModuleName $local:SelfModuleName
 
         if ($local:menuTopRow -lt 0) {
             $local:menuTopRow = $Host.UI.RawUI.CursorPosition.Y - $local:menuLineCount
@@ -107,7 +113,7 @@ function Select-Office365Modules {
             38 {
                 # Up arrow
                 $local:next = $local:SelectedIndex - 1
-                while ($local:next -ge 0 -and $local:ModuleInfo[$local:next].ReplacedBy -and -not $local:CurrentSelection[$local:ModuleInfo[$local:next].Module]) {
+                while ($local:next -ge 0 -and ($local:ModuleInfo[$local:next].Module -eq $local:SelfModuleName -or ($local:ModuleInfo[$local:next].ReplacedBy -and -not $local:CurrentSelection[$local:ModuleInfo[$local:next].Module]))) {
                     $local:next--
                 }
                 if ($local:next -ge 0) { $local:SelectedIndex = $local:next }
@@ -115,7 +121,7 @@ function Select-Office365Modules {
             40 {
                 # Down arrow
                 $local:next = $local:SelectedIndex + 1
-                while ($local:next -le $local:MaxIndex -and $local:ModuleInfo[$local:next].ReplacedBy -and -not $local:CurrentSelection[$local:ModuleInfo[$local:next].Module]) {
+                while ($local:next -le $local:MaxIndex -and ($local:ModuleInfo[$local:next].Module -eq $local:SelfModuleName -or ($local:ModuleInfo[$local:next].ReplacedBy -and -not $local:CurrentSelection[$local:ModuleInfo[$local:next].Module]))) {
                     $local:next++
                 }
                 if ($local:next -le $local:MaxIndex) { $local:SelectedIndex = $local:next }
@@ -123,8 +129,10 @@ function Select-Office365Modules {
             32 {
                 # Spacebar — toggle selection
                 $currentModuleInfo = $local:ModuleInfo[$local:SelectedIndex]
-                # Deprecated modules (ReplacedBy) can only be deselected when installed; cannot be installed fresh
-                if ($currentModuleInfo.ReplacedBy -and -not $local:CurrentSelection[$currentModuleInfo.Module]) {
+                if ($currentModuleInfo.Module -eq $local:SelfModuleName) {
+                    # This module is always required — do nothing
+                }
+                elseif ($currentModuleInfo.ReplacedBy -and -not $local:CurrentSelection[$currentModuleInfo.Module]) {
                     # Not installed and deprecated — do nothing
                 }
                 else {
