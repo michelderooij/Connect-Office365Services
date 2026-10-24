@@ -137,6 +137,8 @@ Set-Office365ServicesPreferences -NoBanner $true -NoReport $true
 Set-Office365ServicesPreferences -NoAutoConnect $true
 ```
 
+Suppressing the banner or module report only affects displayed output; PSResourceGet detection still runs. If a private or public function file fails to load, module import stops and reports the failure.
+
 ## Breaking Changes Per v4.0
 
 Version 4.0 converted Connect-Office365Services from a standalone script into a proper PowerShell module. The following changes may require updating existing scripts or profiles that used the older `.ps1` file:

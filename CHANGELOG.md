@@ -1,5 +1,9 @@
 # Changelog
 
+## v4.0.9
+- Fixed: PSResourceGet detection when `NoBanner` is enabled while the installed-module report is shown.
+- Changed: Module import now stops with a diagnostic if a private or public function file fails to load.
+
 ## v4.0.8
 - Added: `Move-Office365Modules` to move all supported installed modules from one scope to the other (AllUsers ↔ CurrentUser). Requires administrator privileges. The Connect-Office365Services module itself is excluded.
 - Changed: `Select-Office365Modules` now shows `Connect-Office365Services` in the module list as a permanently checked, non-selectable entry labelled `(required)` instead of hiding it entirely.

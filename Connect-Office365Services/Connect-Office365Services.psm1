@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0.8'
+$local:ModuleVersion = '4.0.9'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
@@ -9,7 +9,7 @@ foreach ($local:Function in $local:PrivateFunctions) {
         . $local:Function.FullName
     }
     catch {
-        Write-Error ('Failed to import private function {0}: {1}' -f $local:Function.BaseName, $_.Exception.Message)
+        Write-Error ('Failed to import private function {0}: {1}' -f $local:Function.BaseName, $_.Exception.Message) -ErrorAction Stop
     }
 }
 
@@ -20,7 +20,7 @@ foreach ($local:Function in $local:PublicFunctions) {
         . $local:Function.FullName
     }
     catch {
-        Write-Error ('Failed to import public function {0}: {1}' -f $local:Function.BaseName, $_.Exception.Message)
+        Write-Error ('Failed to import public function {0}: {1}' -f $local:Function.BaseName, $_.Exception.Message) -ErrorAction Stop
     }
 }
 
@@ -46,9 +46,9 @@ $script:myConsoleColors = [PSCustomObject]@{
 # Get-Module -ListAvailable scans every module directory (~6-12 s with 400+ modules).
 # Instead, pre-fetch the report module list (cheap in-memory JSON parse) and pass its
 # names as a -Name filter so PowerShell resolves only the specific module folders.
-#   - NoReport=false  → targeted query for ~30 report modules (+ banner modules when needed)
+#   - NoReport=false  → targeted query for report modules + PSResourceGet (+ PackageManagement for banner)
 #   - NoBanner=false, NoReport=true → targeted 2-module query (banner version numbers only)
-#   - Both true       → no scan at all
+#   - Both true       → no broad inventory scan (PSResourceGet gets a targeted lookup)
 
 # Pre-load the Office 365 module list now (JSON literal, zero I/O) so the name array
 # drives the targeted Get-Module query and the result is reused in the report loop.
@@ -62,9 +62,10 @@ if (-not $script:myOffice365Services['NoReport']) {
     # Targeted scan: only the module names the report loop will query.
     # Get-Module -Name resolves specific module folders rather than enumerating all directories.
     $local:ScanNames = @($local:ReportFunctions.Module)
+    $local:ScanNames += 'Microsoft.PowerShell.PSResourceGet'
     if (-not $script:myOffice365Services['NoBanner']) {
-        # Fold banner modules into the same single query to avoid a second scan.
-        $local:ScanNames += 'Microsoft.PowerShell.PSResourceGet', 'PackageManagement'
+        # Fold the remaining banner module into the same query to avoid a second scan.
+        $local:ScanNames += 'PackageManagement'
     }
     $local:AllInstalled = Get-Module -Name $local:ScanNames -ListAvailable -ErrorAction SilentlyContinue
 }
