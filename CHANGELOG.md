@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.0.10
+- Changed: `Test-Office365Connectivity` now includes a `Ready` flag alongside `Reachable` and evaluates service readiness as part of the default operation.
+- Fixed: `Invoke-WebRequest` compatibility with PowerShell 5.1 and PowerShell 7 by only adding `-UseBasicParsing` when supported.
+- Fixed typo module info structure
+
 ## v4.0.9
 - Fixed: PSResourceGet detection when `NoBanner` is enabled while the installed-module report is shown.
 - Changed: Module import now stops with a diagnostic if a private or public function file fails to load.

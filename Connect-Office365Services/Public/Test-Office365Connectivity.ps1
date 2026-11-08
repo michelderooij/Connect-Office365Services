@@ -1,16 +1,17 @@
 function Test-Office365Connectivity {
     <#
     .SYNOPSIS
-    Tests reachability of key Microsoft 365 service endpoints for the active environment.
+    Tests reachability and readiness of key Microsoft 365 service endpoints for the active environment.
 
     .DESCRIPTION
     Sends a lightweight HTTP GET to each service endpoint and reports whether it
-    is reachable. An HTTP response of any status code (2xx–4xx) is treated as
-    reachable — it proves the host is alive and responding. Timeouts and DNS
-    failures are reported as unreachable.
+    is reachable and ready for use. Any successful HTTP response indicates the
+    host is alive and responding. 401/403 responses are treated as reachable and
+    auth-required rather than unreachable. Timeouts and DNS failures are reported
+    as unreachable.
 
-    Useful for diagnosing proxy, firewall, or DNS issues before attempting to
-    connect to a service.
+    Useful for diagnosing proxy, firewall, DNS, or tenant configuration issues
+    before attempting to connect to a service.
 
     The SharePoint Online endpoint is skipped when no tenant is configured in
     the current session.
@@ -20,15 +21,14 @@ function Test-Office365Connectivity {
     Tests all endpoints for the currently configured environment and displays results.
 
     .EXAMPLE
-    Test-Office365Connectivity | Where-Object { -not $_.Reachable }
-    Displays only the unreachable endpoints.
+    Test-Office365Connectivity | Where-Object { -not $_.Ready }
+    Displays endpoints that are reachable but not ready for service use.
     #>
     [CmdletBinding()]
     param()
 
     # ── Resolve environment-specific endpoints ────────────────────────────────
     $local:authBase = $script:myOffice365Services['AzureADAuthorizationEndpointUri']
-    # Strip to just the scheme+host for a clean HEAD-style test
     $local:authEndpoint = if ($local:authBase) {
         try { ([uri]$local:authBase).GetLeftPart([UriPartial]::Authority) } catch { $local:authBase }
     }
@@ -55,7 +55,6 @@ function Test-Office365Connectivity {
         'Azure Information Protection' = 'https://api.aadrm.com'
     }
 
-    # ── Test each endpoint ────────────────────────────────────────────────────
     foreach ($local:svcName in $local:endpoints.Keys) {
         $local:url = $local:endpoints[$local:svcName]
 
@@ -64,6 +63,7 @@ function Test-Office365Connectivity {
                 Service    = $local:svcName
                 Endpoint   = '(skipped — tenant name not configured)'
                 Reachable  = $null
+                Ready      = $null
                 StatusCode = $null
                 Details    = 'Set tenant via Get-Office365Credential or Get-Office365Tenant'
             }
@@ -71,30 +71,75 @@ function Test-Office365Connectivity {
         }
 
         $local:reachable = $false
+        $local:ready = $false
         $local:statusCode = $null
         $local:details = ''
 
         try {
-            $local:response = Invoke-WebRequest -Uri $local:url -Method Get `
-                -UseBasicParsing -TimeoutSec 10 -ErrorAction Stop
-            $local:statusCode = $local:response.StatusCode
+            $local:invokeParams = @{
+                Uri         = $local:url
+                Method      = 'Get'
+                TimeoutSec  = 10
+                ErrorAction = 'Stop'
+            }
+
+            # PowerShell 5.1 supports -UseBasicParsing; PowerShell 7 does not.
+            if ($PSVersionTable.PSEdition -eq 'Desktop' -or $PSVersionTable.PSVersion.Major -lt 6) {
+                $local:invokeParams['UseBasicParsing'] = $true
+            }
+
+            $local:response = Invoke-WebRequest @local:invokeParams
+            $local:statusCode = [int]$local:response.StatusCode
             $local:reachable = $true
+
+            if ($local:statusCode -ge 200 -and $local:statusCode -lt 500) {
+                $local:ready = $true
+                if ($local:statusCode -in 401, 403) {
+                    $local:details = 'Service is reachable; authentication or authorization is required.'
+                }
+            }
+            elseif ($local:statusCode -ge 500) {
+                $local:ready = $false
+                $local:details = 'Service responded with HTTP {0}; service readiness is degraded.' -f $local:statusCode
+            }
         }
         catch [System.Net.WebException] {
-            # PS5: a WebException with a response still means the host answered
             $local:webEx = $_.Exception
             if ($local:webEx.Response) {
                 $local:statusCode = [int]$local:webEx.Response.StatusCode
                 $local:reachable = $true
+
+                if ($local:statusCode -in 401, 403) {
+                    $local:ready = $true
+                    $local:details = 'Service is reachable; authentication or authorization is required.'
+                }
+                elseif ($local:statusCode -ge 500) {
+                    $local:ready = $false
+                    $local:details = 'Service responded with HTTP {0}; service readiness is degraded.' -f $local:statusCode
+                }
+                else {
+                    $local:ready = $true
+                }
             }
             else {
                 $local:details = $local:webEx.Message
             }
         }
         catch [Microsoft.PowerShell.Commands.HttpResponseException] {
-            # PS7: non-2xx responses throw HttpResponseException — the host answered
             $local:statusCode = [int]$_.Exception.Response.StatusCode
             $local:reachable = $true
+
+            if ($local:statusCode -in 401, 403) {
+                $local:ready = $true
+                $local:details = 'Service is reachable; authentication or authorization is required.'
+            }
+            elseif ($local:statusCode -ge 500) {
+                $local:ready = $false
+                $local:details = 'Service responded with HTTP {0}; service readiness is degraded.' -f $local:statusCode
+            }
+            else {
+                $local:ready = $true
+            }
         }
         catch {
             $local:details = $_.Exception.Message
@@ -104,6 +149,7 @@ function Test-Office365Connectivity {
             Service    = $local:svcName
             Endpoint   = $local:url
             Reachable  = $local:reachable
+            Ready      = $local:ready
             StatusCode = $local:statusCode
             Details    = $local:details
         }

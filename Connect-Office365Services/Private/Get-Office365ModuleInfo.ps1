@@ -146,7 +146,7 @@ function Get-Office365ModuleInfo {
         "Module": "MSAL.PS",
         "Description": "MSAL for PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/MSAL.PS"
-    },
+    }
 
     ]' | ConvertFrom-Json
 }
