@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.0.11
+- Fixed: EXO/SCC connections without a cached identity now use native Exchange authentication instead of preloading MSAL from another module; explicit EXO authentication options bypass cached-identity checks.
+- Removed support for managing Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta; initialization notices identify Microsoft.Entra and Microsoft.Entra.Beta as their replacements.
+- Added: Deprecation warnings for explicit `-Credential` use with `Connect-EXO` and `Connect-SCC`; `Connect-SCC` now accepts and forwards the parameter when supported.
+- Added: `-Url` and `-Credential` overrides to `Connect-SPO`.
+- Added: Initialization warnings for installed retired modules and Microsoft Graph PowerShell v2 retirement on Windows PowerShell 5.x.
+- Removed: Support for managing MSOnline, AzureAD and AzureADPreview; older saved-state entries for all retired modules are skipped during restore.
+- Changed: On PowerShell 7, shared token acquisition prefers ExchangeOnlineManagement's MSAL DLL before Az.Accounts, Graph Authentication, or MSAL.PS. DLL loading failures are now reported.
+
 ## v4.0.10
 - Changed: `Test-Office365Connectivity` now includes a `Ready` flag alongside `Reachable` and evaluates service readiness as part of the default operation.
 - Fixed: `Invoke-WebRequest` compatibility with PowerShell 5.1 and PowerShell 7 by only adding `-UseBasicParsing` when supported.

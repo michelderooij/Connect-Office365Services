@@ -9,6 +9,8 @@ function Restore-Office365ModuleState {
     Use -Recent to install the latest available version instead.
 
     The module state is created by Save-Office365ModuleState.
+    Retired module entries in older saved states are skipped, including MSOnline,
+    AzureAD, AzureADPreview, Microsoft.Graph.Entra, and Microsoft.Graph.Entra.Beta.
 
     .PARAMETER Recent
     When specified, installs the most recent available version of each module rather
@@ -55,6 +57,11 @@ function Restore-Office365ModuleState {
     foreach ($local:Entry in $local:ModuleState) {
         $local:ModuleName    = $local:Entry.Module
         $local:PinnedVersion = $local:Entry.Version
+
+        if ($local:ModuleName -in $script:retiredModules) {
+            Write-Warning ('Skipping unsupported module {0} from saved state.' -f $local:ModuleName)
+            continue
+        }
 
         if ($Recent) {
             Write-Host ('Installing {0} (latest)...' -f $local:ModuleName) -NoNewline

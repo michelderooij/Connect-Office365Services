@@ -1,7 +1,7 @@
 @{
     # Module identity
     RootModule        = 'Connect-Office365Services.psm1'
-    ModuleVersion     = '4.0.9'
+    ModuleVersion     = '4.0.11'
     GUID              = '6b44e9b9-f24f-4b27-bce0-bfef01a75d31'
     Author            = 'Michel de Rooij'
     CompanyName       = 'EighTwOne'
@@ -63,7 +63,7 @@
     # Module metadata for PSGallery
     PrivateData       = @{
         PSData = @{
-            Tags         = @('Office365', 'Microsoft365', 'ExchangeOnline', 'AzureAD', 'SharePoint', 'Teams', 'MicrosoftTeams', 'PowerApps', 'Connect', 'M365')
+            Tags         = @('Office365', 'Microsoft365', 'ExchangeOnline', 'SharePoint', 'Teams', 'MicrosoftTeams', 'PowerApps', 'Connect', 'M365')
             LicenseUri   = 'https://github.com/michelderooij/Connect-Office365Services/blob/main/LICENSE.md'
             ProjectUri   = 'https://github.com/michelderooij/Connect-Office365Services'
             ReleaseNotes = 'https://github.com/michelderooij/Connect-Office365Services/blob/main/CHANGELOG.md'

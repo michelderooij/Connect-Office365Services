@@ -6,24 +6,6 @@ function Get-Office365ModuleInfo {
         "Repo": "https://www.powershellgallery.com/packages/ExchangeOnlineManagement"
     },
     {
-        "Module": "MSOnline",
-        "Description": "Azure Active Directory (v1)",
-        "Repo": "https://www.powershellgallery.com/packages/MSOnline",
-        "ReplacedBy": "Microsoft.Entra"
-    },
-    {
-        "Module": "AzureAD",
-        "Description": "Azure Active Directory (v2)",
-        "Repo": "https://www.powershellgallery.com/packages/azuread",
-        "ReplacedBy": "Microsoft.Entra"
-    },
-    {
-        "Module": "AzureADPreview",
-        "Description": "Azure Active Directory (v2 Preview)",
-        "Repo": "https://www.powershellgallery.com/packages/AzureADPreview",
-        "ReplacedBy": "Microsoft.Entra"
-    },
-    {
         "Module": "AIPService",
         "Description": "Azure Information Protection",
         "Repo": "https://www.powershellgallery.com/packages/AIPService"
@@ -74,22 +56,10 @@ function Get-Office365ModuleInfo {
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Beta"
     },
     {
-        "Module": "Microsoft.Graph.Entra",
-        "Description": "Microsoft Graph Entra (deprecated)",
-        "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Entra",
-        "ReplacedBy": "Microsoft.Entra"
-    },
-    {
         "Module": "Microsoft.Entra",
         "Description": "Microsoft Entra PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Entra",
         "Replaces": "Microsoft.Graph.Entra"
-    },
-    {
-        "Module": "Microsoft.Graph.Entra.Beta",
-        "Description": "Microsoft Graph Entra Beta (deprecated)",
-        "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Entra.Beta",
-        "ReplacedBy": "Microsoft.Entra.Beta"
     },
     {
         "Module": "Microsoft.Entra.Beta",

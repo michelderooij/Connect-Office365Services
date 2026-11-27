@@ -19,6 +19,12 @@ function Connect-EXO {
         }
     }
 
+    begin {
+        if ($PSBoundParameters.ContainsKey('Credential')) {
+            Write-ExchangeCredentialDeprecationWarning
+        }
+    }
+
     process {
         if (-not (Get-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue)) {
             Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue
@@ -52,7 +58,9 @@ function Connect-EXO {
         # Credential handling — skip when modern/cert/app auth params were supplied
         if ( $PSBoundParameters.ContainsKey('UserPrincipalName') -or $PSBoundParameters.ContainsKey('Certificate') -or
             $PSBoundParameters.ContainsKey('CertificateFilePath') -or $PSBoundParameters.ContainsKey('CertificateThumbprint') -or
-            $PSBoundParameters.ContainsKey('AppId')) {
+            $PSBoundParameters.ContainsKey('AppId') -or $PSBoundParameters['AccessToken'] -or
+            $PSBoundParameters['Device'] -or $PSBoundParameters['ManagedIdentity'] -or
+            $PSBoundParameters['InlineCredential']) {
             Write-Host ('Connecting to Exchange Online ..')
         }
         else {
@@ -61,13 +69,12 @@ function Connect-EXO {
                 $script:myOffice365Services['Office365Credential'] = $PSBoundParameters['Credential']
             }
             else {
-                # Ensure we have an account cached (MSAL) or credentials (legacy)
+                # Let Exchange handle sign-in without loading another module's MSAL assembly.
                 if ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
                     if ($script:myOffice365Services['NoAutoConnect']) {
                         Write-Error 'No credentials cached. Run Get-Office365Credential first or supply credentials explicitly.'
                         return
                     }
-                    Get-Office365Credential
                 }
 
                 if ( $script:myOffice365Services['Office365UPN']) {

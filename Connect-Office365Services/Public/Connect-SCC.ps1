@@ -1,15 +1,50 @@
 function Connect-SCC {
+    <#
+    .SYNOPSIS
+    Connects to Security & Compliance PowerShell.
+
+    .DESCRIPTION
+    Uses the cached identity unless explicit credentials are provided. With no
+    cached identity, Exchange handles interactive sign-in unless NoAutoConnect is set.
+    Microsoft is removing -Credential from new Exchange Online PowerShell module versions
+    released starting December 2026.
+
+    .PARAMETER Credential
+    Credentials to pass to Connect-IPPSSession. This authentication method is deprecated.
+
+    .EXAMPLE
+    Connect-SCC
+    Connects using the cached identity or Exchange's interactive sign-in.
+
+    .EXAMPLE
+    Connect-SCC -Credential (Get-Credential)
+    Connects using explicit credentials and displays a deprecation warning.
+    #>
+    [CmdletBinding()]
+    param(
+        [ValidateNotNull()]
+        [System.Management.Automation.PSCredential]$Credential
+    )
+
+    $local:explicitCredential = $PSBoundParameters.ContainsKey('Credential')
+    if ($local:explicitCredential) {
+        Write-ExchangeCredentialDeprecationWarning
+    }
     if (-not (Get-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue)) {
         Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue
     }
-    if (Get-Command -Name ExchangeOnlineManagement\Connect-IPPSSession -ErrorAction SilentlyContinue) {
-        # Ensure we have an account cached (MSAL) or credentials (legacy)
-        if ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
+    $local:command = Get-Command -Name ExchangeOnlineManagement\Connect-IPPSSession -ErrorAction SilentlyContinue
+    if ($local:command) {
+        if ($local:explicitCredential -and -not $local:command.Parameters.ContainsKey('Credential')) {
+            Write-Error 'The installed Connect-IPPSSession command does not support the Credential parameter.'
+            return
+        }
+        # Let Exchange handle sign-in without loading another module's MSAL assembly.
+        if (-not $local:explicitCredential -and -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
             if ($script:myOffice365Services['NoAutoConnect']) {
                 Write-Error 'No credentials cached. Run Get-Office365Credential first or supply credentials explicitly.'
                 return
             }
-            Get-Office365Credential
         }
 
         Write-Host 'Connecting to Security & Compliance Center ..'
@@ -33,7 +68,10 @@ function Connect-SCC {
         # Pass UPN so EOM's own internal MSAL acquires the SCC token silently via WAM SSO.
         # External MSAL clients cannot request EXO/SCC tokens — AAD blocks first-party to
         # first-party token requests from external apps (AADSTS65002).
-        if ($script:myOffice365Services['Office365UPN']) {
+        if ($local:explicitCredential) {
+            $local:connectParams['Credential'] = $Credential
+        }
+        elseif ($script:myOffice365Services['Office365UPN']) {
             $local:connectParams['UserPrincipalName'] = $script:myOffice365Services['Office365UPN']
         }
         elseif ($script:myOffice365Services['Office365Credential']) {
@@ -44,6 +82,7 @@ function Connect-SCC {
             $script:myOffice365Services['SessionCC'] = Connect-IPPSSession @local:connectParams
         }
         catch {
+            if ($local:explicitCredential) { throw }
             # WAM (Windows Web Account Manager) broker requires a native window handle that
             # PowerShell console and terminal hosts never supply, causing a timeout.
             # Fall back to device code flow which only needs the console.

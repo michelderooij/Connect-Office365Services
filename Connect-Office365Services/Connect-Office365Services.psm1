@@ -1,6 +1,6 @@
 #Requires -Version 5.0
 
-$local:ModuleVersion = '4.0.10'
+$local:ModuleVersion = '4.0.11'
 
 # ── Load Private functions ────────────────────────────────────────────────────
 $local:PrivateFunctions = Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Private') -Filter '*.ps1' -Recurse -ErrorAction SilentlyContinue
@@ -44,11 +44,8 @@ $script:myConsoleColors = [PSCustomObject]@{
 
 # ── Detect PSResourceGet + gather module inventory ────────────────────────────
 # Get-Module -ListAvailable scans every module directory (~6-12 s with 400+ modules).
-# Instead, pre-fetch the report module list (cheap in-memory JSON parse) and pass its
-# names as a -Name filter so PowerShell resolves only the specific module folders.
-#   - NoReport=false  → targeted query for report modules + PSResourceGet (+ PackageManagement for banner)
-#   - NoBanner=false, NoReport=true → targeted 2-module query (banner version numbers only)
-#   - Both true       → no broad inventory scan (PSResourceGet gets a targeted lookup)
+# Use a targeted inventory that also includes retired modules and, on PowerShell 5,
+# Graph SDK submodules even when the report and banner are disabled.
 
 # Pre-load the Office 365 module list now (JSON literal, zero I/O) so the name array
 # drives the targeted Get-Module query and the result is reused in the report loop.
@@ -57,23 +54,16 @@ if (-not $script:myOffice365Services['NoReport']) {
     $local:ReportFunctions = Get-Office365ModuleInfo
 }
 
-$local:AllInstalled = $null
+$local:ScanNames = @(Get-NoticeModuleNames) + @('Microsoft.PowerShell.PSResourceGet')
 if (-not $script:myOffice365Services['NoReport']) {
-    # Targeted scan: only the module names the report loop will query.
-    # Get-Module -Name resolves specific module folders rather than enumerating all directories.
-    $local:ScanNames = @($local:ReportFunctions.Module)
-    $local:ScanNames += 'Microsoft.PowerShell.PSResourceGet'
-    if (-not $script:myOffice365Services['NoBanner']) {
-        # Fold the remaining banner module into the same query to avoid a second scan.
-        $local:ScanNames += 'PackageManagement'
-    }
-    $local:AllInstalled = Get-Module -Name $local:ScanNames -ListAvailable -ErrorAction SilentlyContinue
+    $local:ScanNames += @($local:ReportFunctions.Module)
 }
-elseif (-not $script:myOffice365Services['NoBanner']) {
-    # Targeted query — sufficient for banner version numbers.
-    $local:AllInstalled = Get-Module -Name 'Microsoft.PowerShell.PSResourceGet', 'PackageManagement' `
-        -ListAvailable -ErrorAction SilentlyContinue
+if (-not $script:myOffice365Services['NoBanner']) {
+    $local:ScanNames += 'PackageManagement'
 }
+$local:AllInstalled = Get-Module -Name ($local:ScanNames | Select-Object -Unique) -ListAvailable -ErrorAction SilentlyContinue
+
+Write-ModuleRetirementNotices -AllInstalled $local:AllInstalled
 
 Get-myPSResourceGetInstalled -AllInstalled $local:AllInstalled
 $local:PSGetModule = if ($local:AllInstalled) {

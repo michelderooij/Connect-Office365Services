@@ -24,6 +24,29 @@ After importing the module, the following functions are available:
 * `Connect-PnP`                     Connects to a SharePoint site via PnP PowerShell; use `-SiteUrl` to specify a site, defaults to tenant root
 * `Connect-Office365`               Connects to EXO, Teams, SCC, and SPO by default; use `-Service` to target specific services
 
+Explicit `-Credential` use with `Connect-EXO` or `Connect-SCC` displays a warning
+when the installed Exchange Online Management module supports that parameter.
+Microsoft announced that new Exchange Online PowerShell module versions released
+starting December 2026 will no longer support this parameter. Use interactive
+sign-in, certificate-based app-only authentication, or managed identity as appropriate.
+See the [Microsoft announcement](https://techcommunity.microsoft.com/blog/exchange/deprecation-of-the--credential-parameter-in-exchange-online-powershell/4494584).
+On newer versions without `-Credential`, `Connect-EXO` rejects the parameter before
+it can warn; `Connect-SCC` warns and reports that the parameter is unsupported.
+
+When no identity is cached, `Connect-EXO` and `Connect-SCC` use Exchange Online
+Management's native interactive sign-in rather than acquiring a Graph token first.
+`NoAutoConnect` still blocks this automatic sign-in. Native Exchange sign-in does not
+populate this module's MSAL cache for Graph, SharePoint, or other services.
+
+`Connect-SPO` accepts `-Url` to override the cached tenant's administration URL and
+`-Credential` to use explicit credentials instead of a cached identity or token:
+
+```powershell
+Connect-SPO -Url https://contoso-admin.sharepoint.com -Credential (Get-Credential)
+```
+
+If `-Credential` uses a custom domain and no tenant is cached, also supply `-Url`.
+
 **Disconnect & session**
 * `Disconnect-Office365`            Disconnects one or more services
 * `Get-Office365Session`            Shows the active identity and per-service connection status
@@ -57,6 +80,10 @@ After importing the module, the following functions are available:
 
 PowerShell 5.1 or higher. Modules for the services you want to connect to must be installed — use `Select-Office365Modules` to manage them.
 
+On import, installed MSOnline, AzureAD, and AzureADPreview modules are reported as retired. On Windows PowerShell 5.x, Microsoft Graph PowerShell v2 also triggers a retirement notice. Microsoft announced a roughly 12-month retirement period beginning in September 2026 and a v3 release planned for Q4 2026 that supports PowerShell 7.x only. See the [Microsoft announcement](https://devblogs.microsoft.com/microsoft365dev/investing-in-a-more-reliable-microsoft-graph-powershell-experience/).
+
+Installed Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta modules are reported as retired and replaced by Microsoft.Entra and Microsoft.Entra.Beta, respectively.
+
 ### Installing
 
 ```powershell
@@ -74,6 +101,29 @@ Then import the module (or add this to your PowerShell profile):
 ```powershell
 Import-Module Connect-Office365Services
 ```
+
+### Troubleshooting MSAL assembly conflicts
+
+If an Exchange connection reports that `Microsoft.Identity.Client.dll` has a
+manifest mismatch, restart PowerShell. Removing a module does not unload its
+assemblies. In a fresh `pwsh -NoProfile` process, connect to Exchange before loading
+other authentication modules:
+
+```powershell
+Import-Module Connect-Office365Services
+Connect-EXO -UserPrincipalName 'admin@example.com'
+```
+
+EXO/SCC no longer preload external MSAL assemblies for sign-in, but incompatible
+assemblies loaded by other code can still conflict. Use separate PowerShell
+processes for incompatible module combinations; do not replace vendor DLLs.
+
+On PowerShell 7, when the shared token helper needs to load MSAL, it first tries the
+netCore DLL bundled with ExchangeOnlineManagement, preferring the loaded Exchange module
+version over other installed versions. It falls back to Az.Accounts, Graph
+Authentication, or MSAL.PS if necessary. An already-loaded MSAL assembly is reused;
+this preference cannot resolve conflicts already present in the process. PowerShell
+5.1 retains the original Az.Accounts, Graph Authentication, and MSAL.PS provider order.
 
 ## Exporting and Importing Preferences
 
@@ -110,6 +160,8 @@ Or install the latest available version of each saved module instead:
 ```powershell
 Restore-Office365ModuleState -Recent
 ```
+
+MSOnline, AzureAD, AzureADPreview, Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta are no longer managed. Entries in older saved states are skipped with a warning; installed copies are not removed.
 
 ## Preferences
 

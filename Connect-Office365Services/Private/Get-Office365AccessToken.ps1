@@ -4,8 +4,9 @@ function Get-Office365AccessToken {
     Acquires an OAuth2 access token for the specified resource scope using MSAL.NET directly.
 
     .DESCRIPTION
-    Loads Microsoft.Identity.Client from whichever installed module ships it (Az.Accounts,
-    Microsoft.Graph.Authentication, or MSAL.PS). If none is found, emits a one-time warning
+    On PowerShell 7, prefers Microsoft.Identity.Client bundled with ExchangeOnlineManagement.
+    Otherwise tries Az.Accounts, Microsoft.Graph.Authentication, or MSAL.PS.
+    If none is found, emits a one-time warning
     and returns $null so callers fall back to legacy PSCredential authentication.
 
     On first call a PublicClientApplication is built and cached in the module state so the
@@ -26,24 +27,41 @@ function Get-Office365AccessToken {
         [string]$Scope
     )
 
-    # Ensure Microsoft.Identity.Client is loaded. It ships inside Az.Accounts,
-    # Microsoft.Graph.Authentication, and the archived MSAL.PS module; load it from
-    # whichever is installed rather than requiring a separate download.
+    # Prefer Exchange's MSAL on PowerShell 7; its framework DLL needs additional dependency setup.
     if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies() |
             Where-Object { $_.GetName().Name -eq 'Microsoft.Identity.Client' })) {
 
+        $local:exchangeBase = $null
+        if ($PSVersionTable.PSVersion.Major -ge 7) {
+            $local:exchangeModule = Get-Module -Name ExchangeOnlineManagement |
+            Sort-Object Version -Descending | Select-Object -First 1
+            if (-not $local:exchangeModule) {
+                $local:exchangeModule = Get-Module -Name ExchangeOnlineManagement -ListAvailable |
+                Sort-Object Version -Descending | Select-Object -First 1
+            }
+            if ($local:exchangeModule) {
+                $local:exchangeBase = Join-Path -Path $local:exchangeModule.ModuleBase -ChildPath 'netCore'
+            }
+        }
         $local:searchBases = @(
+            $local:exchangeBase,
             (Get-Module Az.Accounts -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).ModuleBase,
             (Get-Module Microsoft.Graph.Authentication -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).ModuleBase,
             (Get-Module MSAL.PS -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).ModuleBase
         ) | Where-Object { $_ }
 
         foreach ($local:base in $local:searchBases) {
-            $local:dll = Get-ChildItem -Path $local:base -Filter 'Microsoft.Identity.Client.dll' `
-                -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            $local:dll = Get-ChildItem -LiteralPath $local:base -Filter 'Microsoft.Identity.Client.dll' -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1
             if ($local:dll) {
-                try { Add-Type -Path $local:dll.FullName -ErrorAction Stop } catch { }
-                break
+                try {
+                    Write-Verbose ('Loading MSAL.NET from {0}.' -f $local:dll.FullName)
+                    Add-Type -Path $local:dll.FullName -ErrorAction Stop
+                    break
+                }
+                catch {
+                    Write-Warning ('Could not load MSAL.NET from {0}: {1}' -f $local:dll.FullName, $_.Exception.Message)
+                }
             }
         }
     }
@@ -53,7 +71,7 @@ function Get-Office365AccessToken {
             Where-Object { $_.GetName().Name -eq 'Microsoft.Identity.Client' })) {
         if (-not $script:myOffice365Services['MsalNetWarned']) {
             Write-Warning ('MSAL.NET (Microsoft.Identity.Client) not detected. ' +
-                'Install Az, Microsoft.Graph, or MSAL.PS for modern authentication; ' +
+                'Install ExchangeOnlineManagement, Az, Microsoft.Graph, or MSAL.PS for modern authentication; ' +
                 'you may be prompted to sign in multiple times.')
             $script:myOffice365Services['MsalNetWarned'] = $true
         }
