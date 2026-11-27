@@ -45,8 +45,16 @@ function Connect-Office365 {
         PnP       = { Connect-PnP }
     }
 
+    $local:results = [System.Collections.Generic.List[object]]::new()
     foreach ($local:svc in $local:targets) {
-        & $local:dispatch[$local:svc]
+        $local:result = & $local:dispatch[$local:svc]
+        foreach ($local:status in @($local:result)) {
+            if ($local:status -and $local:status.PSObject.Properties['Service']) {
+                $local:results.Add($local:status)
+            }
+        }
     }
+
+    $local:results.ToArray()
 }
 

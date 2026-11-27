@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.0.12
+- Added: Connection commands support available authentication options such as certificates, access tokens and managed identities.
+- Added: `Connect-MG` supports Graph authentication options and the selected cloud.
+- Changed: Connection commands return status objects only on failure. Use `Get-Office365Session` to view all connection statuses.
+- Removed support for managing Microsoft.Graph.Intune; initialization warns that it has not been updated since 2019 and recommends Microsoft.Graph.DeviceManagement.
+
 ## v4.0.11
 - Fixed: EXO/SCC connections without a cached identity now use native Exchange authentication instead of preloading MSAL from another module; explicit EXO authentication options bypass cached-identity checks.
 - Removed support for managing Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta; initialization notices identify Microsoft.Entra and Microsoft.Entra.Beta as their replacements.

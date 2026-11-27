@@ -26,12 +26,13 @@ function Connect-EXO {
     }
 
     process {
+        $local:explicitAuth = @('UserPrincipalName', 'Credential', 'Certificate', 'CertificateFilePath', 'CertificateThumbprint', 'AppId', 'AccessToken', 'Device', 'ManagedIdentity', 'InlineCredential') |
+        Where-Object { $PSBoundParameters.ContainsKey($_) }
         if (-not (Get-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue)) {
             Import-Module -Name ExchangeOnlineManagement -ErrorAction SilentlyContinue
         }
         if (-not (Get-Command -Name ExchangeOnlineManagement\Connect-ExchangeOnline -ErrorAction SilentlyContinue)) {
-            Write-Error -Message 'Cannot connect to Exchange Online - module not installed or not loading.'
-            return
+            return (New-Office365ConnectionStatus -Service 'Exchange Online' -StateKey 'ConnectedEXO' -Connected $false -ErrorMessage 'Cannot connect to Exchange Online - module not installed or not loading.')
         }
 
         # EOM v3 uses REST mode by default; do NOT inject the legacy /PowerShell-LiveId ConnectionUri —
@@ -54,6 +55,7 @@ function Connect-EXO {
         if (-not $PSBoundParameters.ContainsKey('PSSessionOption')) {
             $PSBoundParameters['PSSessionOption'] = $script:myOffice365Services['SessionOptions']
         }
+        $PSBoundParameters['ErrorAction'] = 'Stop'
 
         # Credential handling — skip when modern/cert/app auth params were supplied
         if ( $PSBoundParameters.ContainsKey('UserPrincipalName') -or $PSBoundParameters.ContainsKey('Certificate') -or
@@ -72,8 +74,7 @@ function Connect-EXO {
                 # Let Exchange handle sign-in without loading another module's MSAL assembly.
                 if ( -not $script:myOffice365Services['Office365UPN'] -and -not $script:myOffice365Services['Office365Credential']) {
                     if ($script:myOffice365Services['NoAutoConnect']) {
-                        Write-Error 'No credentials cached. Run Get-Office365Credential first or supply credentials explicitly.'
-                        return
+                        return (New-Office365ConnectionStatus -Service 'Exchange Online' -StateKey 'ConnectedEXO' -Connected $false -ErrorMessage 'No credentials cached. Run Get-Office365Credential first or supply credentials explicitly.')
                     }
                 }
 
@@ -96,24 +97,31 @@ function Connect-EXO {
         }
 
         try {
-            $script:myOffice365Services['Session365'] = Connect-ExchangeOnline @PSBoundParameters
-        }
-        catch {
-            # WAM (Windows Web Account Manager) broker requires a native window handle that
-            # PowerShell console and terminal hosts never supply, causing a timeout.
-            # Fall back to device code flow which only needs the console.
-            if ($_.Exception.Message -like '*Operation did not start in the allotted time*' -or
-                $_.Exception.Message -like '*Error Acquiring Token*') {
-                Write-Warning 'WAM broker timed out — retrying with device code flow (check console for URL + code) ..'
-                $PSBoundParameters.Remove('UserPrincipalName') | Out-Null
-                $PSBoundParameters['Device'] = $true
+            try {
                 $script:myOffice365Services['Session365'] = Connect-ExchangeOnline @PSBoundParameters
             }
-            else { throw }
+            catch {
+                # WAM (Windows Web Account Manager) broker requires a native window handle that
+                # PowerShell console and terminal hosts never supply, causing a timeout.
+                # Fall back to device code flow which only needs the console.
+                if (-not $local:explicitAuth -and
+                    ($_.Exception.Message -like '*Operation did not start in the allotted time*' -or
+                    $_.Exception.Message -like '*Error Acquiring Token*')) {
+                    Write-Warning 'WAM broker timed out — retrying with device code flow (check console for URL + code) ..'
+                    $PSBoundParameters.Remove('UserPrincipalName') | Out-Null
+                    $PSBoundParameters['Device'] = $true
+                    $script:myOffice365Services['Session365'] = Connect-ExchangeOnline @PSBoundParameters
+                }
+                else { throw }
+            }
+            if ($script:myOffice365Services['Session365']) {
+                Import-PSSession -Session $script:myOffice365Services['Session365'] -AllowClobber -ErrorAction Stop | Out-Null
+            }
         }
-        if ( $script:myOffice365Services['Session365']) {
-            Import-PSSession -Session $script:myOffice365Services['Session365'] -AllowClobber
+        catch {
+            $script:myOffice365Services['Session365'] = $null
+            return (New-Office365ConnectionStatus -Service 'Exchange Online' -StateKey 'ConnectedEXO' -Connected $false -ErrorMessage ('Cannot connect to Exchange Online: {0}' -f $_.Exception.Message))
         }
-        $script:myOffice365Services['ConnectedEXO'] = $true
+        New-Office365ConnectionStatus -Service 'Exchange Online' -StateKey 'ConnectedEXO' -Connected $true -Detail $script:myOffice365Services['Office365UPN']
     }
 }

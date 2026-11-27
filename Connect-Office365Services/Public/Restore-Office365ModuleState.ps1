@@ -10,7 +10,8 @@ function Restore-Office365ModuleState {
 
     The module state is created by Save-Office365ModuleState.
     Retired module entries in older saved states are skipped, including MSOnline,
-    AzureAD, AzureADPreview, Microsoft.Graph.Entra, and Microsoft.Graph.Entra.Beta.
+    AzureAD, AzureADPreview, Microsoft.Graph.Entra, Microsoft.Graph.Entra.Beta,
+    and Microsoft.Graph.Intune.
 
     .PARAMETER Recent
     When specified, installs the most recent available version of each module rather

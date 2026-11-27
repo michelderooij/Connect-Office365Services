@@ -41,11 +41,6 @@ function Get-Office365ModuleInfo {
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.PowerApps.PowerShell"
     },
     {
-        "Module": "Microsoft.Graph.Intune",
-        "Description": "Microsoft Intune Graph API",
-        "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph.Intune"
-    },
-    {
         "Module": "Microsoft.Graph",
         "Description": "Microsoft Graph PowerShell",
         "Repo": "https://www.powershellgallery.com/packages/Microsoft.Graph"

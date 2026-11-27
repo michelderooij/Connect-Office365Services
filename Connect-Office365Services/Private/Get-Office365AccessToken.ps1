@@ -27,6 +27,11 @@ function Get-Office365AccessToken {
         [string]$Scope
     )
 
+    $local:authority = [string]$script:myOffice365Services['AzureADAuthorizationEndpointUri']
+    if (-not $local:authority) {
+        throw ('No OAuth authority is configured for the selected {0} environment.' -f $script:myOffice365Services['AzureEnvironmentName'])
+    }
+
     # Prefer Exchange's MSAL on PowerShell 7; its framework DLL needs additional dependency setup.
     if (-not ([System.AppDomain]::CurrentDomain.GetAssemblies() |
             Where-Object { $_.GetName().Name -eq 'Microsoft.Identity.Client' })) {
@@ -86,12 +91,17 @@ function Get-Office365AccessToken {
     $local:appKey   = 'MsalApp'
 
     # Build or reuse the PublicClientApplication for this client.
+    if ($script:myOffice365Services[$local:appKey] -and
+        $script:myOffice365Services['MsalAuthority'] -ne $local:authority) {
+        $script:myOffice365Services[$local:appKey] = $null
+    }
     if (-not $script:myOffice365Services[$local:appKey]) {
         $script:myOffice365Services[$local:appKey] =
         [Microsoft.Identity.Client.PublicClientApplicationBuilder]::Create($local:clientId).
-        WithAuthority('https://login.microsoftonline.com/common').
+        WithAuthority($local:authority).
         WithDefaultRedirectUri().
         Build()
+        $script:myOffice365Services['MsalAuthority'] = $local:authority
     }
 
     $local:app = $script:myOffice365Services[$local:appKey]

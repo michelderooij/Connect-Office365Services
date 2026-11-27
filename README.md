@@ -26,8 +26,73 @@ After importing the module, the following functions are available:
 
 **Disconnect & session**
 * `Disconnect-Office365`            Disconnects one or more services
-* `Get-Office365Session`            Shows the active identity and per-service connection status
+* `Get-Office365Session`            Returns the active identity and per-service connection status as structured objects
 * `Test-Office365Connectivity`      Tests reachability of key Microsoft 365 endpoints
+
+`Connect-*` commands and `Connect-Office365` return status objects only for failed
+connections, with `Service`, `Connected`, `Detail`, and `Error` properties. They
+also write a PowerShell error. Successful connections do not return a status object.
+`Get-Office365Session` returns an `Identity` and a list of `Connections`. It
+checks the current connection where possible; otherwise, it reports the last
+connection result.
+
+```powershell
+$session = Get-Office365Session
+$session.Connections | Where-Object Connected
+
+$failures = Connect-Office365 -Service EXO, Graph
+$failures
+```
+
+### Connection authentication options
+
+Individual connection commands support authentication options provided by the
+installed service module. Explicit authentication options take precedence over
+the cached identity. Available options vary by module version. For example:
+
+```powershell
+Connect-MSTeams -Identity -TenantId '<tenant-id>'
+Connect-SPO -Url 'https://contoso-admin.sharepoint.com' -ManagedIdentity
+Connect-SCC -AppId '<application-id>' -Organization 'contoso.onmicrosoft.com' -CertificateThumbprint '<thumbprint>'
+Connect-PnP -SiteUrl 'https://contoso.sharepoint.com' -ManagedIdentity
+Connect-PowerBI -ServicePrincipal -Tenant '<tenant-id>' -ApplicationId '<application-id>' -CertificateThumbprint '<thumbprint>'
+```
+
+`Connect-PnP` also accepts `-Url` as an alias for `-SiteUrl`; it does not expose
+`-ReturnConnection`. For
+Exchange On-Premises, `Connect-Exchange` accepts `-Credential`, `-Authentication`,
+`-CertificateThumbprint`, and `-ConnectionUri`; certificate authentication requires
+an explicit HTTPS URI. With no authentication options, existing cached-identity behavior
+is retained. `Connect-Office365` remains a multi-service convenience command; use
+the individual wrappers to supply service-specific parameters.
+
+### Microsoft Graph authentication and cloud targeting
+
+`Connect-MG` exposes the authentication parameters supported by the installed
+`Connect-MgGraph` command, including `-Scopes`, `-TenantId`, certificate
+authentication, `-Identity` for managed identity, client-secret credentials, and
+`-Environment`. Supplying any of these options uses the Graph SDK authentication
+flow directly; without them, the existing cached-identity flow is retained.
+
+```powershell
+# Least-privilege delegated permission in a specific tenant
+Connect-MG -Scopes 'User.Read.All' -TenantId '<tenant-id>'
+
+# App-only certificate authentication
+Connect-MG -ClientId '<application-id>' -TenantId '<tenant-id>' -CertificateThumbprint '<thumbprint>'
+
+# Managed identity in Azure US Government
+Connect-MG -Identity -Environment USGov
+```
+
+When `-Environment` is omitted, `Connect-MG` targets the selected module cloud:
+Default, GCC, and Germany use `Global`; China uses `China`; GCCHigh uses `USGov`;
+and DoD uses `USGovDoD`. An explicitly supplied Graph SDK environment takes
+precedence. AzurePPE has no built-in Graph SDK environment in this module, so
+specify a registered environment with `-Environment`.
+
+If the selected environment has no configured identity authority, cached-token
+authentication reports an error rather than using the commercial cloud.
 
 **Credentials & identity**
 * `Get-Office365Credential`         Gets Microsoft 365 credentials
@@ -57,9 +122,9 @@ After importing the module, the following functions are available:
 
 PowerShell 5.1 or higher. Modules for the services you want to connect to must be installed — use `Select-Office365Modules` to manage them.
 
-On import, installed MSOnline, AzureAD, and AzureADPreview modules are reported as retired. On Windows PowerShell 5.x, Microsoft Graph PowerShell v2 also triggers a retirement notice. Microsoft announced a roughly 12-month retirement period beginning in September 2026 and a v3 release planned for Q4 2026 that supports PowerShell 7.x only. See the [Microsoft announcement](https://devblogs.microsoft.com/microsoft365dev/investing-in-a-more-reliable-microsoft-graph-powershell-experience/).
+On import, installed MSOnline, AzureAD, and AzureADPreview modules are reported as retired. On Windows PowerShell 5.x, Microsoft Graph PowerShell v2 also triggers a retirement notice: Graph PowerShell v3 will be released in September 2027 and will support PowerShell 7.x only. See the [Microsoft announcement](https://devblogs.microsoft.com/microsoft365dev/investing-in-a-more-reliable-microsoft-graph-powershell-experience/).
 
-Installed Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta modules are reported as retired and replaced by Microsoft.Entra and Microsoft.Entra.Beta, respectively.
+Installed Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta modules are reported as retired and replaced by Microsoft.Entra and Microsoft.Entra.Beta, respectively. Microsoft.Graph.Intune is also retired; it has not been updated since 2019, and Microsoft.Graph.DeviceManagement is recommended.
 
 ### Installing
 
@@ -138,7 +203,7 @@ Or install the latest available version of each saved module instead:
 Restore-Office365ModuleState -Recent
 ```
 
-MSOnline, AzureAD, AzureADPreview, Microsoft.Graph.Entra and Microsoft.Graph.Entra.Beta are no longer managed. Entries in older saved states are skipped with a warning; installed copies are not removed.
+MSOnline, AzureAD, AzureADPreview, Microsoft.Graph.Entra, Microsoft.Graph.Entra.Beta and Microsoft.Graph.Intune are no longer managed. Entries in older saved states are skipped with a warning; installed copies are not removed.
 
 ## Preferences
 
