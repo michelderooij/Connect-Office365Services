@@ -24,29 +24,6 @@ After importing the module, the following functions are available:
 * `Connect-PnP`                     Connects to a SharePoint site via PnP PowerShell; use `-SiteUrl` to specify a site, defaults to tenant root
 * `Connect-Office365`               Connects to EXO, Teams, SCC, and SPO by default; use `-Service` to target specific services
 
-Explicit `-Credential` use with `Connect-EXO` or `Connect-SCC` displays a warning
-when the installed Exchange Online Management module supports that parameter.
-Microsoft announced that new Exchange Online PowerShell module versions released
-starting December 2026 will no longer support this parameter. Use interactive
-sign-in, certificate-based app-only authentication, or managed identity as appropriate.
-See the [Microsoft announcement](https://techcommunity.microsoft.com/blog/exchange/deprecation-of-the--credential-parameter-in-exchange-online-powershell/4494584).
-On newer versions without `-Credential`, `Connect-EXO` rejects the parameter before
-it can warn; `Connect-SCC` warns and reports that the parameter is unsupported.
-
-When no identity is cached, `Connect-EXO` and `Connect-SCC` use Exchange Online
-Management's native interactive sign-in rather than acquiring a Graph token first.
-`NoAutoConnect` still blocks this automatic sign-in. Native Exchange sign-in does not
-populate this module's MSAL cache for Graph, SharePoint, or other services.
-
-`Connect-SPO` accepts `-Url` to override the cached tenant's administration URL and
-`-Credential` to use explicit credentials instead of a cached identity or token:
-
-```powershell
-Connect-SPO -Url https://contoso-admin.sharepoint.com -Credential (Get-Credential)
-```
-
-If `-Credential` uses a custom domain and no tenant is cached, also supply `-Url`.
-
 **Disconnect & session**
 * `Disconnect-Office365`            Disconnects one or more services
 * `Get-Office365Session`            Shows the active identity and per-service connection status

@@ -2,3 +2,4 @@
 *.bak
 *.DS_Store
 .vscode/mcp.json
+.github/copilot-instructions.md
